@@ -1,8 +1,19 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import {PrismaModule} from "./prisma/prisma.module";
+import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
-    imports: [PrismaModule, AuthModule],
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            envFilePath: process.env.NODE_ENV === 'production'
+                ? '.env.production'
+                : '.env.development',
+            expandVariables: true,
+        }),
+        PrismaModule,
+        AuthModule
+    ],
 })
 export class AppModule {}

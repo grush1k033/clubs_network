@@ -12,7 +12,6 @@ import {
     ApiOperation, ApiUnauthorizedResponse
 } from "@nestjs/swagger";
 import {AuthResponse} from "./dto/auth.dto";
-import {AuthGuard} from "@nestjs/passport";
 import {Authorization} from "./decorators/authorization.decorator";
 import {Authorized} from "./decorators/authorized.decorator";
 import {User} from "@prisma/client";

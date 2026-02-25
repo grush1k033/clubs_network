@@ -147,13 +147,16 @@ export class AuthService {
     }
 
     private setCookie(res: Response, value: string, expires: Date) {
+        const isDevelopment = this.configService.get('NODE_ENV') === 'development';
+
         res.cookie('refreshToken', value, {
             httpOnly: true,
-            domain: this.COOKIE_DOMAIN,
+            domain: isDevelopment ? undefined : this.COOKIE_DOMAIN,
             expires,
-            secure: !isDev(this.configService),
-            sameSite: isDev(this.configService) ? 'lax' : 'none'
-        })
+            secure: !isDevelopment,
+            sameSite: isDevelopment ? 'lax' : 'none',
+            path: '/'
+        });
     }
 }
 
