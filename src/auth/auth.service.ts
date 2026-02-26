@@ -107,13 +107,11 @@ export class AuthService {
 
     async validate(id: number) {
         const user = await this.prismaService.user.findUnique({
-            where: {
-                id: id
-            }
-        })
+            where: { id }
+        });
 
         if(!user) {
-            throw new NotFoundException('Пользователь не найден')
+            throw new NotFoundException('Пользователь не найден');
         }
         return user;
     }

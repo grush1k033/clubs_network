@@ -19,11 +19,12 @@ async function bootstrap() {
     }));
 
     const isDev = configService.get('NODE_ENV') === 'development';
-    const clientUrl = configService.get('CLIENT_URL');
 
     app.enableCors({
-        origin: isDev ? ['http://localhost:4200'] : clientUrl,
+        origin: isDev ? '*' : true,
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     });
 
     setupSwagger(app);

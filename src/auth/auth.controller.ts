@@ -56,7 +56,7 @@ export class AuthController {
         @Res({passthrough: true}) res: Response,
         @Body() dto: LoginDto
     ){
-        return await  this.authService.login(res, dto);
+        return await this.authService.login(res, dto);
     }
 
     @ApiOperation({
