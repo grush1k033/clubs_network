@@ -91,4 +91,10 @@ export class AuthController {
     async me(@Authorized() user: User) {
         return user;
     }
+
+    @Post('test')
+    @HttpCode(HttpStatus.OK)
+    async test() {
+        return { message: 'Test endpoint works' };
+    }
 }
