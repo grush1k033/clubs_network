@@ -167,7 +167,7 @@ export class AuthService {
         // 3. Устанавливаем куку
         res.cookie('refreshToken', value, {
             httpOnly: true,
-            domain: isDevelopment ? undefined : this.COOKIE_DOMAIN,
+            // domain: isDevelopment ? undefined : this.COOKIE_DOMAIN,
             expires,
             secure: !isDevelopment,
             sameSite: isDevelopment ? 'lax' : 'none',
