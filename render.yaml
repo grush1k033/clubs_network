@@ -3,7 +3,7 @@ services:
     name: clubs-network-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build && npx prisma generate
+    buildCommand: npm install && npx prisma generate && ./node_modules/.bin/nest build
     startCommand: npm run start:prod
     envVars:
       - key: DATABASE_URL
