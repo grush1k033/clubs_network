@@ -145,8 +145,26 @@ export class AuthService {
     }
 
     private setCookie(res: Response, value: string, expires: Date) {
-        const isDevelopment = this.configService.get('NODE_ENV') === 'development';
+        // 1. Получаем значения прямо сейчас
+        const envNodeEnv = this.configService.get('NODE_ENV');
+        const envCookieDomain = this.configService.get('COOKIE_DOMAIN');
+        const isDevelopment = envNodeEnv === 'development';
 
+        // 2. Подробный лог
+        console.log('\n========== SET COOKIE DEBUG ==========');
+        console.log('📌 Timestamp:', new Date().toISOString());
+        console.log('🔹 ConfigService.get("NODE_ENV"):', envNodeEnv);
+        console.log('🔹 ConfigService.get("COOKIE_DOMAIN"):', envCookieDomain);
+        console.log('🔹 this.COOKIE_DOMAIN (from constructor):', this.COOKIE_DOMAIN);
+        console.log('🔹 isDevelopment:', isDevelopment);
+        console.log('🔹 Domain to set:', isDevelopment ? 'undefined (localhost)' : `"${this.COOKIE_DOMAIN}"`);
+        console.log('🔹 Secure flag:', !isDevelopment);
+        console.log('🔹 SameSite:', isDevelopment ? 'lax' : 'none');
+        console.log('🔹 Cookie value (first 10 chars):', value.substring(0, 10) + '...');
+        console.log('🔹 Expires:', expires);
+        console.log('=======================================\n');
+
+        // 3. Устанавливаем куку
         res.cookie('refreshToken', value, {
             httpOnly: true,
             domain: isDevelopment ? undefined : this.COOKIE_DOMAIN,
