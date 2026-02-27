@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: clubs-network-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clubs-network-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_TTL
+        value: 15m
+      - key: JWT_REFRESH_TOKEN_TTL
+        value: 7d
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_DOMAIN
+        value: ".onrender.com"
+      - key: CLIENT_URL
+        value: "https://your-frontend-url.com"  # заменишь позже
+
+databases:
+  - name: clubs-network-db
+    plan: free
+    databaseName: clubs_network
