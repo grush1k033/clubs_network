@@ -26,14 +26,14 @@ import {JwtGuard} from "./guards/auth.guard";
         AuthService,
         JwtStrategy,
         JwtGuard,
-        {
-            provide: 'APP_GUARD',
-            useClass: JwtGuard,
-        },
-        {
-            provide: 'APP_GUARD',
-            useClass: RolesGuard,
-        }
+        // {
+        //     provide: 'APP_GUARD',
+        //     useClass: JwtGuard,
+        // },
+        // {
+        //     provide: 'APP_GUARD',
+        //     useClass: RolesGuard,
+        // }
     ]
 })
 export class AuthModule {}
