@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
 enum Role {
   super_admin
   club_admin
@@ -14,14 +15,96 @@ enum Role {
   member
 }
 
+enum Status {
+  active
+  inactive
+  closed
+}
+
+enum MemberType {
+  single
+  monthly
+  quarterly
+  yearly
+}
+
+enum MemberStatus {
+  active
+  expired
+  cancelled
+}
+
+// Models
 model User {
-  id        Int   @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   name      String?
-  role      String   @default("member")
+  role      Role     @default(member)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Связи (один пользователь может иметь только одну активную связь с клубом)
+  employee  Employee?   // Для club_admin и trainer
+  member    Member?     // Для обычных членов клуба
+
   @@map("users")
+}
+
+model Club {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  address   String
+  phone     String?
+  email     String?
+  description String?
+  logo      String?
+  status    Status   @default(active)
+  workingHours Json?  // {"monday": "08:00-22:00", "tuesday": "08:00-22:00", ...}
+
+  // Связи
+  employees  Employee[]
+  members    Member[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("clubs")
+}
+
+model Employee {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique // Один пользователь = один Employee
+  user      User     @relation(fields: [userId], references: [id])
+  clubId    Int
+  club      Club     @relation(fields: [clubId], references: [id])
+  role      Role     // club_admin или trainer
+  position  String?  // Должность (например: "Старший тренер", "Администратор")
+  hiredAt   DateTime @default(now()) @map("hired_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("employees")
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique // Один пользователь = один Member
+  user      User     @relation(fields: [userId], references: [id])
+  clubId    Int
+  club      Club     @relation(fields: [clubId], references: [id])
+
+  type      MemberType @default(monthly)
+  status    MemberStatus @default(active)
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  price     Float
+  paid      Boolean  @default(false)
+  paidAt    DateTime? @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("members")
 }
