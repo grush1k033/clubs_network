@@ -1,3 +1,5 @@
+import { User } from '@prisma/client';
+
 declare global {
     namespace Express {
         interface Request {
@@ -5,3 +7,6 @@ declare global {
         }
     }
 }
+
+// Пустой экспорт, чтобы файл считался модулем
+export {};

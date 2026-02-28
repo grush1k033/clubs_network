@@ -1,3 +1,4 @@
+/// <reference path="../../types/express.d.ts" />
 import {createParamDecorator, ExecutionContext} from "@nestjs/common";
 import {User} from "@prisma/client";
 import type { Request } from 'express';
