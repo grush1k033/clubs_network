@@ -30,7 +30,7 @@ export class PaymentsService {
             body: JSON.stringify({
                 amount: {
                     value: amount.toFixed(2),
-                    currency: 'BYN',
+                    currency: 'RUB',
                 },
                 confirmation: {
                     type: 'redirect',
