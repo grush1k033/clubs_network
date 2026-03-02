@@ -7,50 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
+// ========== ENUMS ==========
+
 enum Role {
   super_admin
   club_admin
   trainer
   member
+  user
 }
 
-enum Status {
+enum ClubStatus {
   active
   inactive
   closed
 }
 
-enum MemberType {
-  single
-  monthly
-  quarterly
-  yearly
+enum TariffType {
+  single    // разовое посещение
+  monthly   // месячный абонемент
+  quarterly // квартальный
+  yearly    // годовой
 }
 
-enum MemberStatus {
-  active
-  expired
-  cancelled
-}
+// ========== MODELS ==========
 
-// Models
+// 👤 Пользователи
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   name      String?
-  role      Role     @default(member)
+  role      Role     @default(user)
+
+  balance     Balance?       // баланс пользователя
+  transactions Transaction[] // история операций
+
+  // 👇 Привязка к клубу (для club_admin, trainer, member)
+  clubId    Int?     @map("club_id")
+  club      Club?    @relation(fields: [clubId], references: [id])
+
+  // 👇 Выбранный тариф (для member)
+  tariffId  Int?     @map("tariff_id")
+  tariff    Tariff?  @relation(fields: [tariffId], references: [id])
+
+  // 👇 Данные участника (зависят от конкретной покупки)
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+  paid      Boolean?  @default(false)
+  paidAt    DateTime? @map("paid_at")
+
+  // 👇 Данные сотрудника (для club_admin, trainer)
+  position  String?
+  hiredAt   DateTime? @map("hired_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Связи (один пользователь может иметь только одну активную связь с клубом)
-  employee  Employee?   // Для club_admin и trainer
-  member    Member?     // Для обычных членов клуба
 
   @@map("users")
 }
 
+// 🏢 Клубы
 model Club {
   id        Int      @id @default(autoincrement())
   name      String   @unique
@@ -59,12 +76,12 @@ model Club {
   email     String?
   description String?
   logo      String?
-  status    Status   @default(active)
-  workingHours Json?  // {"monday": "08:00-22:00", "tuesday": "08:00-22:00", ...}
+  status    ClubStatus   @default(active)
+  workingHours Json?
 
   // Связи
-  employees  Employee[]
-  members    Member[]
+  users     User[]
+  tariffs   Tariff[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -72,39 +89,66 @@ model Club {
   @@map("clubs")
 }
 
-model Employee {
+// 💰 Тарифы (привязаны к клубу)
+model Tariff {
   id        Int      @id @default(autoincrement())
-  userId    Int      @unique // Один пользователь = один Employee
-  user      User     @relation(fields: [userId], references: [id])
-  clubId    Int
+  clubId    Int      @map("club_id")
   club      Club     @relation(fields: [clubId], references: [id])
-  role      Role     // club_admin или trainer
-  position  String?  // Должность (например: "Старший тренер", "Администратор")
-  hiredAt   DateTime @default(now()) @map("hired_at")
+
+  name      String        // например: "Месячный безлимит"
+  type      TariffType
+  price     Float
+  duration  Int?          // длительность в днях (null для single)
+  isActive  Boolean  @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("employees")
+  // Пользователи, купившие этот тариф
+  users     User[]
+
+  @@unique([clubId, name]) // в одном клубе тарифы с уникальными названиями
+  @@map("tariffs")
 }
 
-model Member {
+// Баланс пользователя (один к одному с User)
+model Balance {
   id        Int      @id @default(autoincrement())
-  userId    Int      @unique // Один пользователь = один Member
+  userId    Int      @unique @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
-  clubId    Int
-  club      Club     @relation(fields: [clubId], references: [id])
 
-  type      MemberType @default(monthly)
-  status    MemberStatus @default(active)
-  startDate DateTime @map("start_date")
-  endDate   DateTime @map("end_date")
-  price     Float
-  paid      Boolean  @default(false)
-  paidAt    DateTime? @map("paid_at")
+  amount    Float    @default(100)      // текущий баланс
+  currency  String   @default("BYN")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("members")
+  @@map("balances")
+}
+
+// История транзакций
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+
+  type      TransactionType
+  amount    Float
+  balanceAfter Float @map("balance_after")
+
+  // Для привязки к конкретной покупке
+  tariffId  Int? @map("tariff_id")
+  clubId    Int? @map("club_id")
+
+  description String?  // комментарий (например: "Оплата тарифа Месячный")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  deposit          // пополнение
+  payment          // успешная оплата
+  failed_payment   // неудачная попытка оплаты
+  refund           // возврат
 }
