@@ -41,7 +41,7 @@ export class AuthController {
 
     @ApiOperation({
         summary: 'Вход в систему ',
-        description: 'Авторизуео пользователя и выдаёт токен доступа'
+        description: 'Авторизует пользователя и выдаёт токен доступа'
     })
     @ApiOkResponse({type: AuthResponse})
     @ApiBadRequestResponse({

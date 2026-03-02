@@ -258,4 +258,18 @@ export class UsersService {
             take: limit,
         });
     }
+
+    async createFailedTransaction(userId: number, amount: number, description: string) {
+        const user = await this.findOne(userId);
+
+        return this.prisma.transaction.create({
+            data: {
+                userId,
+                type: 'failed_payment',
+                amount: 0, // или можно хранить amount со знаком?
+                balanceAfter: user.balance?.amount || 0,
+                description,
+            },
+        });
+    }
 }
