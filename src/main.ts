@@ -4,6 +4,8 @@ import { AppModule } from './app.module';
 import * as cookieParser from "cookie-parser";
 import { setupSwagger } from "./utils/swagger.util";
 import { ConfigService } from '@nestjs/config';
+import {ResponseFormatInterceptor} from "./common/interceptors/response-format.interceptor";
+import {HttpExceptionFilter} from "./common/filters/http-exception.filter";
 
 
 async function bootstrap() {
@@ -11,6 +13,9 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
 
     app.use(cookieParser());
+
+    app.useGlobalInterceptors(new ResponseFormatInterceptor());
+    app.useGlobalFilters(new HttpExceptionFilter());
 
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
