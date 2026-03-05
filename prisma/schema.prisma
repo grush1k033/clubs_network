@@ -40,6 +40,8 @@ model User {
   name      String?
   role      Role     @default(user)
 
+  emailVerified Boolean @default(false)
+
   balance     Balance?       // баланс пользователя
   transactions Transaction[] // история операций
 
