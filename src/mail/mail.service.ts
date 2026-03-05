@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,82 +9,94 @@ import * as handlebars from 'handlebars';
 
 @Injectable()
 export class MailService {
-    private transporter: nodemailer.Transporter;
+    private readonly logger = new Logger(MailService.name);
+    private oAuth2Client: OAuth2Client;
 
     constructor(private configService: ConfigService) {
-        this.transporter = nodemailer.createTransport({
-            host: this.configService.get('MAIL_HOST'),
-            port: this.configService.get('MAIL_PORT'),
-            secure: false, // true для 465, false для других портов
-            auth: {
-                user: this.configService.get('MAIL_USER'),
-                pass: this.configService.get('MAIL_PASSWORD'),
-            },
-            tls: {
-                rejectUnauthorized: false,
-            },
-        });
+        this.initializeOAuth2Client();
+    }
+
+    private initializeOAuth2Client() {
+        const clientId = this.configService.get('GMAIL_CLIENT_ID');
+        const clientSecret = this.configService.get('GMAIL_CLIENT_SECRET');
+        const redirectUri = this.configService.get('GMAIL_REDIRECT_URI');
+
+        if (!clientId || !clientSecret || !redirectUri) {
+            this.logger.error('GMAIL OAuth2 credentials are missing');
+            throw new Error('GMAIL OAuth2 credentials are missing');
+        }
+
+        this.oAuth2Client = new google.auth.OAuth2(
+            clientId,
+            clientSecret,
+            redirectUri,
+        );
+
+        const refreshToken = this.configService.get('GMAIL_REFRESH_TOKEN');
+        if (refreshToken) {
+            this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
+            this.logger.log('GMAIL OAuth2 client initialized with refresh token');
+        } else {
+            this.logger.warn('GMAIL_REFRESH_TOKEN is missing');
+        }
     }
 
     async sendVerificationEmail(to: string, name: string, token: string) {
-        console.log('========== MAIL SERVICE DEBUG ==========');
-        console.log('1. Начинаем отправку письма на:', to);
-        console.log('2. Переменные окружения (Render):', {
-            host: this.configService.get('MAIL_HOST'),
-            port: this.configService.get('MAIL_PORT'),
-            user: this.configService.get('MAIL_USER'),
-            from: this.configService.get('MAIL_FROM'),
-            hasPassword: !!this.configService.get('MAIL_PASSWORD'),
-            clientUrl: this.configService.get('CLIENT_URL'),
-        });
-
-        const clientUrl = this.configService.get('CLIENT_URL');
-        const link = `${clientUrl}/auth/verify-email?_d=${token}`;
-        console.log('3. Ссылка для подтверждения:', link);
+        this.logger.log(`Начинаем отправку письма на: ${to}`);
 
         try {
+            // Получаем свежий access token
+            const accessTokenResponse = await this.oAuth2Client.getAccessToken();
+            const accessToken = accessTokenResponse.token;
+
+            if (!accessToken) {
+                throw new Error('Не удалось получить access token');
+            }
+
+            this.logger.log('Access token получен успешно');
+
+            // Создаём транспорт Nodemailer с OAuth2
+            const transport = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    type: 'OAuth2',
+                    user: this.configService.get('GMAIL_USER'),
+                    clientId: this.configService.get('GMAIL_CLIENT_ID'),
+                    clientSecret: this.configService.get('GMAIL_CLIENT_SECRET'),
+                    refreshToken: this.configService.get('GMAIL_REFRESH_TOKEN'),
+                    accessToken: accessToken,
+                },
+            } as any);
+
+            const clientUrl = this.configService.get('CLIENT_URL');
+            const link = `${clientUrl}/auth/verify-email?_d=${token}`;
+            this.logger.log(`Ссылка для подтверждения: ${link}`);
+
+            // Читаем шаблон
             const templatePath = path.join(__dirname, 'templates', 'verification.html');
-            console.log('4. Путь к шаблону:', templatePath);
-
             const templateSource = fs.readFileSync(templatePath, 'utf8');
-            console.log('5. Шаблон прочитан, длина:', templateSource.length);
-
             const template = handlebars.compile(templateSource);
             const html = template({ name, link });
-            console.log('6. HTML сгенерирован');
 
-            console.log('7. Пытаюсь отправить письмо с таймаутом 10 секунд...');
-
-            // Создаём обещание с таймаутом
-            const sendPromise = this.transporter.sendMail({
-                from: `"Clubs Network" <${this.configService.get('MAIL_FROM')}>`,
+            // Отправляем письмо
+            const mailOptions = {
+                from: `"Clubs Network" <${this.configService.get('GMAIL_USER')}>`,
                 to,
                 subject: 'Подтверждение email',
                 html,
-            });
+            };
 
-            // Гонка между отправкой и таймаутом
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('TIMEOUT: Отправка письма заняла больше 10 секунд')), 10000);
-            });
-
-            const info = await Promise.race([sendPromise, timeoutPromise]);
-
-            console.log('8. ПИСЬМО УСПЕШНО ОТПРАВЛЕНО!');
-            console.log('9. Ответ от SMTP:', info);
-            console.log('========================================');
+            const info = await transport.sendMail(mailOptions);
+            this.logger.log(`Письмо успешно отправлено: ${info.messageId}`);
+            return info;
 
         } catch (error) {
-            console.log('❌❌❌ ОШИБКА В MAIL SERVICE ❌❌❌');
-            console.log('Тип ошибки:', error.name);
-            console.log('Сообщение:', error.message);
-            if (error.code) console.log('Код ошибки:', error.code);
-            if (error.command) console.log('Команда:', error.command);
-            if (error.response) console.log('Ответ сервера:', error.response);
-            console.log('========================================');
-
-            // Важно! Пробрасываем ошибку дальше, чтобы запрос упал и мы увидели её в ответе
+            this.logger.error('Ошибка при отправке письма:', error);
             throw new Error(`Ошибка отправки письма: ${error.message}`);
         }
+    }
+
+    async sendTestEmail(to: string) {
+        return this.sendVerificationEmail(to, 'Тест', 'test-token-123');
     }
 }

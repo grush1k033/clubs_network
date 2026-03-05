@@ -48,6 +48,8 @@
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "dotenv-expand": "^12.0.3",
+    "google-auth-library": "^10.6.1",
+    "googleapis": "^171.4.0",
     "handlebars": "^4.7.8",
     "nodemailer": "^8.0.1",
     "passport": "^0.7.0",
