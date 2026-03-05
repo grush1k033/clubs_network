@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as handlebars from 'handlebars';
@@ -11,6 +10,7 @@ import * as handlebars from 'handlebars';
 export class MailService {
     private readonly logger = new Logger(MailService.name);
     private oAuth2Client: OAuth2Client;
+    private gmail;
 
     constructor(private configService: ConfigService) {
         this.initializeOAuth2Client();
@@ -21,11 +21,6 @@ export class MailService {
         const clientSecret = this.configService.get('GMAIL_CLIENT_SECRET');
         const redirectUri = this.configService.get('GMAIL_REDIRECT_URI');
 
-        if (!clientId || !clientSecret || !redirectUri) {
-            this.logger.error('GMAIL OAuth2 credentials are missing');
-            throw new Error('GMAIL OAuth2 credentials are missing');
-        }
-
         this.oAuth2Client = new google.auth.OAuth2(
             clientId,
             clientSecret,
@@ -33,70 +28,67 @@ export class MailService {
         );
 
         const refreshToken = this.configService.get('GMAIL_REFRESH_TOKEN');
-        if (refreshToken) {
-            this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
-            this.logger.log('GMAIL OAuth2 client initialized with refresh token');
-        } else {
-            this.logger.warn('GMAIL_REFRESH_TOKEN is missing');
-        }
+        this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
+
+        this.gmail = google.gmail({ version: 'v1', auth: this.oAuth2Client });
     }
 
     async sendVerificationEmail(to: string, name: string, token: string) {
         this.logger.log(`Начинаем отправку письма на: ${to}`);
 
         try {
-            // Получаем свежий access token
-            const accessTokenResponse = await this.oAuth2Client.getAccessToken();
-            const accessToken = accessTokenResponse.token;
-
-            if (!accessToken) {
-                throw new Error('Не удалось получить access token');
-            }
-
-            this.logger.log('Access token получен успешно');
-
-            // Создаём транспорт Nodemailer с OAuth2
-            const transport = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    type: 'OAuth2',
-                    user: this.configService.get('GMAIL_USER'),
-                    clientId: this.configService.get('GMAIL_CLIENT_ID'),
-                    clientSecret: this.configService.get('GMAIL_CLIENT_SECRET'),
-                    refreshToken: this.configService.get('GMAIL_REFRESH_TOKEN'),
-                    accessToken: accessToken,
-                },
-            } as any);
+            // Обновляем access token
+            await this.oAuth2Client.getAccessToken();
+            this.logger.log('Access token обновлён');
 
             const clientUrl = this.configService.get('CLIENT_URL');
             const link = `${clientUrl}/auth/verify-email?_d=${token}`;
-            this.logger.log(`Ссылка для подтверждения: ${link}`);
 
-            // Читаем шаблон
+            // Читаем и компилируем шаблон
             const templatePath = path.join(__dirname, 'templates', 'verification.html');
             const templateSource = fs.readFileSync(templatePath, 'utf8');
             const template = handlebars.compile(templateSource);
             const html = template({ name, link });
 
-            // Отправляем письмо
-            const mailOptions = {
-                from: `"Clubs Network" <${this.configService.get('GMAIL_USER')}>`,
-                to,
-                subject: 'Подтверждение email',
+            // Создаём MIME-сообщение
+            const utf8Subject = `=?utf-8?B?${Buffer.from('Подтверждение email').toString('base64')}?=`;
+            const messageParts = [
+                `From: "Clubs Network" <${this.configService.get('GMAIL_USER')}>`,
+                `To: ${to}`,
+                'Content-Type: text/html; charset=utf-8',
+                'MIME-Version: 1.0',
+                `Subject: ${utf8Subject}`,
+                '',
                 html,
-            };
+            ];
+            const message = messageParts.join('\n');
 
-            const info = await transport.sendMail(mailOptions);
-            this.logger.log(`Письмо успешно отправлено: ${info.messageId}`);
-            return info;
+            // Кодируем в base64URL
+            const encodedMessage = Buffer.from(message)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            // Отправляем через Gmail API
+            const res = await this.gmail.users.messages.send({
+                userId: 'me',
+                requestBody: {
+                    raw: encodedMessage,
+                },
+            });
+
+            this.logger.log(`Письмо успешно отправлено! ID: ${res.data.id}`);
+            return res.data;
 
         } catch (error) {
-            this.logger.error('Ошибка при отправке письма:', error);
+            this.logger.error('Детальная ошибка Gmail API:', {
+                message: error.message,
+                code: error.code,
+                status: error.status,
+                details: error.response?.data,
+            });
             throw new Error(`Ошибка отправки письма: ${error.message}`);
         }
-    }
-
-    async sendTestEmail(to: string) {
-        return this.sendVerificationEmail(to, 'Тест', 'test-token-123');
     }
 }
