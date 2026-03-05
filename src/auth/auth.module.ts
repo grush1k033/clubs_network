@@ -9,6 +9,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { PassportModule } from "@nestjs/passport";
 import {RolesGuard} from "./guards/roles.guard";
 import {JwtGuard} from "./guards/auth.guard";
+import {MailModule} from "../mail/mail.module";
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import {JwtGuard} from "./guards/auth.guard";
             useFactory: getJwtConfig,
             inject: [ConfigService]
         }),
+        MailModule,
     ],
     controllers: [AuthController],
     providers: [

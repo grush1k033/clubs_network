@@ -1,4 +1,4 @@
-import {Controller, Post, Body, HttpCode, HttpStatus, Res, Req, Get, UseGuards} from '@nestjs/common';
+import {Controller, Post, Body, HttpCode, HttpStatus, Res, Req, Get, UseGuards, Query} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -92,9 +92,22 @@ export class AuthController {
         return user;
     }
 
-    @Post('test')
+    @Get('verify-email')
     @HttpCode(HttpStatus.OK)
-    async test() {
-        return { message: 'Test endpoint works' };
+    @ApiOperation({ summary: 'Подтверждение email' })
+    @ApiOkResponse({ type: AuthResponse })
+    @ApiUnauthorizedResponse({ description: 'Недействительная или устаревшая ссылка' })
+    async verifyEmail(
+        @Query('_d') token: string,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        return this.authService.verifyEmail(token, res);
+    }
+
+    @Post('resend-verification')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Повторная отправка письма подтверждения' })
+    async resendVerification(@Body('email') email: string) {
+        return this.authService.resendVerificationEmail(email);
     }
 }
