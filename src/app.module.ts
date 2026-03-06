@@ -8,6 +8,7 @@ import { TariffsModule } from './tariffs/tariffs.module';
 import {UsersModule} from "./users/users.module";
 import { PaymentsModule } from './payments/payments.module';
 import { MailModule } from './mail/mail.module';
+import { CronModule } from './cron/cron.module';
 
 @Module({
     imports: [
@@ -25,7 +26,8 @@ import { MailModule } from './mail/mail.module';
         TariffsModule,
         UsersModule,
         PaymentsModule,
-        MailModule
+        MailModule,
+        CronModule
     ],
 })
 export class AppModule {}
