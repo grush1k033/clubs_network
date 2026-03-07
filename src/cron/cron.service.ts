@@ -18,7 +18,7 @@ export class CronService {
                 where: {
                     emailVerified: false,
                     createdAt: {
-                        lt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 24 часа назад
+                        lt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 часов назад
                     },
                 },
             });
