@@ -25,9 +25,13 @@ model User {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
   balance       Balance?
+
   transactions  Transaction[]
+  pushSubscriptions PushSubscription[]
+
   club          Club?         @relation(fields: [clubId], references: [id])
   tariff        Tariff?       @relation(fields: [tariffId], references: [id])
+
 
   @@map("users")
 }
@@ -92,6 +96,21 @@ model Transaction {
   user         User            @relation(fields: [userId], references: [id])
 
   @@map("transactions")
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
 }
 
 enum Role {

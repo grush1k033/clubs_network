@@ -8,7 +8,7 @@ export class CronService {
 
     constructor(private prisma: PrismaService) {}
 
-    // Запускаем каждые 2 часа
+    // Запускаем каждые 14 минут
     @Cron('*/14 * * * *')
     async cleanupUnverifiedUsers() {
         this.logger.log('🧹 Запуск очистки неподтверждённых пользователей...');

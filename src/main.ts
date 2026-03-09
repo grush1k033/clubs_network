@@ -7,7 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import {ResponseFormatInterceptor} from "./common/interceptors/response-format.interceptor";
 import {HttpExceptionFilter} from "./common/filters/http-exception.filter";
 
-
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     const configService = app.get(ConfigService);
