@@ -139,7 +139,6 @@ export class AuthService {
         }
         return user;
     }
-
     async verifyEmail(token: string, res: Response) {
         try {
             const payload = await this.jwtService.verifyAsync(token);
@@ -161,21 +160,17 @@ export class AuthService {
             // Устанавливаем куки (логиним)
             this.auth(res, user.id);
 
-            // Возвращаем JSON, а не редирект
-            return res.json({
-                success: true,
-                message: 'Email подтверждён'
-            });
+            // Редирект на логин с параметром для тоста
+            const clientUrl = this.configService.get('CLIENT_URL');
+            return res.redirect(`${clientUrl}/auth/login?verified=true`);
 
         } catch (error) {
+            const clientUrl = this.configService.get('CLIENT_URL');
             const message = error.name === 'TokenExpiredError'
                 ? 'Ссылка устарела'
                 : 'Недействительная ссылка';
 
-            return res.status(400).json({
-                success: false,
-                message
-            });
+            return res.redirect(`${clientUrl}/auth/login?verified=false&message=${encodeURIComponent(message)}`);
         }
     }
 

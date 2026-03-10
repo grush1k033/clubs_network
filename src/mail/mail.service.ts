@@ -40,10 +40,9 @@ export class MailService {
             await this.oAuth2Client.getAccessToken();
             this.logger.log('Access token обновлён');
 
-            const clientUrl = this.configService.get('CLIENT_URL');
-            const link = `${clientUrl}/landing?_d=${token}`;
+            const serverUrl = this.configService.get('SERVER_URL');
+            const link = `${serverUrl}/auth/verify-email?_d=${token}`;
 
-            // Читаем и компилируем шаблон
             const templatePath = path.join(__dirname, 'templates', 'verification.html');
             const templateSource = fs.readFileSync(templatePath, 'utf8');
             const template = handlebars.compile(templateSource);
