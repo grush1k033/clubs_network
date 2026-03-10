@@ -15,10 +15,11 @@ import {AuthResponse} from "./dto/auth.dto";
 import {Authorization} from "./decorators/authorization.decorator";
 import {Authorized} from "./decorators/authorized.decorator";
 import {User} from "@prisma/client";
+import {ConfigService} from "@nestjs/config";
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) {}
+    constructor(private authService: AuthService, private configService: ConfigService) {}
     @ApiOperation({
         summary: 'Создание аккаунта',
         description: 'Создаёт новый аккаунт пользователя'
@@ -99,9 +100,9 @@ export class AuthController {
     @ApiUnauthorizedResponse({ description: 'Недействительная или устаревшая ссылка' })
     async verifyEmail(
         @Query('_d') token: string,
-        @Res({ passthrough: true }) res: Response,
+        @Res() res: Response,
     ) {
-        return this.authService.verifyEmail(token, res);
+        await this.authService.verifyEmail(token, res);
     }
 
     @Post('resend-verification')

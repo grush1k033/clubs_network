@@ -21,7 +21,7 @@ services:
       - key: COOKIE_DOMAIN
         value: ".onrender.com"
       - key: CLIENT_URL
-        value: "https://your-frontend-url.com"  # заменишь позже
+        value: "http://138.68.94.59/ "
 
 databases:
   - name: clubs-network-db

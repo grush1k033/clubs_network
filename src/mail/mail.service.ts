@@ -37,12 +37,11 @@ export class MailService {
         this.logger.log(`Начинаем отправку письма на: ${to}`);
 
         try {
-            // Обновляем access token
             await this.oAuth2Client.getAccessToken();
             this.logger.log('Access token обновлён');
 
             const clientUrl = this.configService.get('CLIENT_URL');
-            const link = `${clientUrl}/auth/verify-email?_d=${token}`;
+            const link = `${clientUrl}/landing?_d=${token}`;
 
             // Читаем и компилируем шаблон
             const templatePath = path.join(__dirname, 'templates', 'verification.html');
@@ -50,7 +49,6 @@ export class MailService {
             const template = handlebars.compile(templateSource);
             const html = template({ name, link });
 
-            // Создаём MIME-сообщение
             const utf8Subject = `=?utf-8?B?${Buffer.from('Подтверждение email').toString('base64')}?=`;
             const messageParts = [
                 `From: "Clubs Network" <${this.configService.get('GMAIL_USER')}>`,
@@ -70,7 +68,6 @@ export class MailService {
                 .replace(/\//g, '_')
                 .replace(/=+$/, '');
 
-            // Отправляем через Gmail API
             const res = await this.gmail.users.messages.send({
                 userId: 'me',
                 requestBody: {

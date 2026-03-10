@@ -143,7 +143,6 @@ export class AuthService {
     async verifyEmail(token: string, res: Response) {
         try {
             const payload = await this.jwtService.verifyAsync(token);
-
             const user = await this.prismaService.user.findUnique({
                 where: { id: payload.id }
             });
@@ -152,24 +151,31 @@ export class AuthService {
                 throw new UnauthorizedException('Пользователь не найден');
             }
 
-            if (user.emailVerified) {
-                return this.auth(res, user.id); // уже подтверждён — просто логиним
+            if (!user.emailVerified) {
+                await this.prismaService.user.update({
+                    where: { id: user.id },
+                    data: { emailVerified: true }
+                });
             }
 
-            // Подтверждаем email
-            await this.prismaService.user.update({
-                where: { id: user.id },
-                data: { emailVerified: true }
+            // Устанавливаем куки (логиним)
+            this.auth(res, user.id);
+
+            // Возвращаем JSON, а не редирект
+            return res.json({
+                success: true,
+                message: 'Email подтверждён'
             });
 
-            // Логиним пользователя (выдаём токены)
-            return this.auth(res, user.id);
-
         } catch (error) {
-            if (error.name === 'TokenExpiredError') {
-                throw new UnauthorizedException('Ссылка устарела. Запросите новую.');
-            }
-            throw new UnauthorizedException('Недействительная ссылка подтверждения');
+            const message = error.name === 'TokenExpiredError'
+                ? 'Ссылка устарела'
+                : 'Недействительная ссылка';
+
+            return res.status(400).json({
+                success: false,
+                message
+            });
         }
     }
 

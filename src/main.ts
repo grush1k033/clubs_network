@@ -6,10 +6,30 @@ import { setupSwagger } from "./utils/swagger.util";
 import { ConfigService } from '@nestjs/config';
 import {ResponseFormatInterceptor} from "./common/interceptors/response-format.interceptor";
 import {HttpExceptionFilter} from "./common/filters/http-exception.filter";
-
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     const configService = app.get(ConfigService);
+
+    app.enableCors({
+        origin: (origin, callback) => {
+            const allowedOrigins = [
+                'http://localhost:4200',
+                'http://138.68.94.59',
+                'https://clubs-network.onrender.com',
+            ];
+
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'], // это уже есть
+    });
+
+
 
     app.use(cookieParser());
 
@@ -24,12 +44,6 @@ async function bootstrap() {
 
     const isDev = configService.get('NODE_ENV') === 'development';
 
-    app.enableCors({
-        origin: isDev ? '*' : true,
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    });
 
     setupSwagger(app);
 
