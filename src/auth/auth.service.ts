@@ -36,14 +36,20 @@ export class AuthService {
         this.COOKIE_DOMAIN = configService.getOrThrow<string>('COOKIE_DOMAIN')
     }
     async register(res: Response, dto: RegisterDto) {
-        const { name, email, password } = dto;
+        const {name, email, password} = dto;
 
         const existUser = await this.prismaService.user.findUnique({
-            where: { email }
+            where: {email}
         });
 
-        if (existUser) {
+        if (existUser && existUser.emailVerified) {
             throw new ConflictException('Пользователь с такой почтой уже существует');
+        }
+
+        if (existUser && !existUser.emailVerified) {
+            await this.prismaService.user.delete({
+                where: {email}
+            })
         }
 
         const user = await this.prismaService.user.create({
@@ -191,7 +197,7 @@ export class AuthService {
                 ? 'Ссылка устарела'
                 : 'Недействительная ссылка';
 
-            return res.redirect(`${clientUrl}/auth/login?verified=false&message=${encodeURIComponent(message)}`);
+            return res.redirect(`${clientUrl}/auth/register?verified=false&message=${encodeURIComponent(message)}`);
         }
     }
 
