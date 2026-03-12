@@ -126,7 +126,7 @@ export class MailService {
             return res.data;
 
         } catch (error) {
-            this.logger.error('Ошибка отправки письма:', error);
+            this.logger.error('Ошибка отправки письма для сброса пароля:', error);
             throw new Error(`Ошибка отправки письма: ${error.message}`);
         }
     }

@@ -14,11 +14,11 @@ import {ConfigService} from "@nestjs/config";
 import {JwtPayload} from "./interfaces/jwt.interface";
 import type { Response } from 'express';
 import type { Request } from 'express';
-import {isDev} from "../utils/is-dev.util";
 import {MailService} from "../mail/mail.service";
-import {ForgotPasswordDto, ResetPasswordDto} from "./dto/forgot-password.dto";
+import {ForgotPasswordDto} from "./dto/forgot-password.dto";
 import {randomBytes} from "node:crypto";
 import { addHours } from 'date-fns';
+import {ResetPasswordDto} from "./dto/reset-password.dto";
 
 @Injectable()
 export class AuthService {
@@ -195,7 +195,7 @@ export class AuthService {
             const clientUrl = this.configService.get('CLIENT_URL');
             const message = error.name === 'TokenExpiredError'
                 ? 'Ссылка устарела'
-                : 'Недействительная ссылка';
+                : 'Ссылка устарела! Для верификации аккаунта зарегистрируйтесь повторно';
 
             return res.redirect(`${clientUrl}/auth/register?verified=false&message=${encodeURIComponent(message)}`);
         }
@@ -273,23 +273,25 @@ export class AuthService {
     }
 
     async forgotPassword(dto: ForgotPasswordDto) {
+        // 1. Ищем пользователя по email
         const user = await this.prismaService.user.findUnique({
             where: { email: dto.email }
         });
 
+        // 2. Если пользователь не найден — всё равно возвращаем успех (безопасность)
         if (!user) {
-            // Не говорим, что пользователь не найден (безопасность)
             return { message: 'Если email существует, инструкции отправлены' };
         }
 
-        // Генерируем случайный токен
-        const token = randomBytes(32).toString('hex');
-
-        // Удаляем старые токены этого пользователя
+        // 3. Удаляем старые токены этого пользователя
         await this.prismaService.passwordResetToken.deleteMany({
             where: { userId: user.id }
         });
 
+        // 4. Генерируем случайный токен
+        const token = randomBytes(32).toString('hex');
+
+        // 5. Сохраняем в БД (живёт 1 час)
         await this.prismaService.passwordResetToken.create({
             data: {
                 userId: user.id,
@@ -298,9 +300,10 @@ export class AuthService {
             }
         });
 
-        // Отправляем письмо
+        // 6. Формируем ссылку для сброса
         const resetLink = `${this.configService.get('CLIENT_URL')}/auth/reset-password?token=${token}`;
 
+        // 7. Отправляем письмо
         await this.mailService.sendPasswordResetEmail(
             user.email,
             user.name || 'Пользователь',
@@ -311,6 +314,7 @@ export class AuthService {
     }
 
     async resetPassword(dto: ResetPasswordDto) {
+
         const resetToken = await this.prismaService.passwordResetToken.findUnique({
             where: { token: dto.token },
             include: { user: true }
@@ -328,23 +332,20 @@ export class AuthService {
             throw new BadRequestException('Токен истёк');
         }
 
-        // Хешируем новый пароль
         const hashedPassword = await hash(dto.password);
 
-        // Обновляем пароль пользователя
         await this.prismaService.user.update({
             where: { id: resetToken.userId },
             data: { password: hashedPassword }
         });
 
-        // Помечаем токен как использованный
         await this.prismaService.passwordResetToken.update({
             where: { id: resetToken.id },
             data: { used: true }
         });
 
-        // Опционально: удаляем все refresh токены пользователя
-        // чтобы завершить все активные сессии
+        // 8. Опционально: удаляем все refresh токены пользователя
+        // (чтобы завершить все активные сессии)
 
         return { message: 'Пароль успешно изменён' };
     }

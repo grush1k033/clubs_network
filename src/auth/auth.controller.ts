@@ -16,7 +16,8 @@ import {Authorization} from "./decorators/authorization.decorator";
 import {Authorized} from "./decorators/authorized.decorator";
 import {User} from "@prisma/client";
 import {ConfigService} from "@nestjs/config";
-import {ForgotPasswordDto, ResetPasswordDto} from "./dto/forgot-password.dto";
+import {ForgotPasswordDto} from "./dto/forgot-password.dto";
+import {ResetPasswordDto} from "./dto/reset-password.dto";
 
 @Controller('auth')
 export class AuthController {
@@ -126,4 +127,5 @@ export class AuthController {
     async resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authService.resetPassword(dto);
     }
+
 }
