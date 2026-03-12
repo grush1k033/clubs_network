@@ -183,7 +183,7 @@ export class AuthService {
 
             // Редирект на логин с параметром для тоста
             const clientUrl = this.configService.get('CLIENT_URL');
-            return res.redirect(`${clientUrl}/auth/login?verified=true`);
+            return res.redirect(`${clientUrl}/landing?_d=${token}`);
 
         } catch (error) {
             const clientUrl = this.configService.get('CLIENT_URL');
