@@ -18,8 +18,16 @@ export class CreateClubDto {
     name: string;
 
     @ApiProperty({
+        description: 'Город',
+        example: 'Минск',
+    })
+    @IsString({ message: 'Город должен быть строкой' })
+    @IsNotEmpty({ message: 'Город обязателен' })
+    city: string;  // ← новое поле
+
+    @ApiProperty({
         description: 'Адрес клуба',
-        example: 'ул. Ленина, 15, Минск',
+        example: 'ул. Ленина, 15',
     })
     @IsString({ message: 'Адрес должен быть строкой' })
     @IsNotEmpty({ message: 'Адрес обязателен' })
@@ -57,7 +65,7 @@ export class CreateClubDto {
     @ApiProperty({
         description: 'URL логотипа (генерируется автоматически после загрузки в Cloudinary)',
         example: 'https://res.cloudinary.com/dk9i69mvn/image/upload/v1/clubs/atlant',
-        readOnly: true, // это поле только для чтения в Swagger
+        readOnly: true,
     })
     @IsOptional()
     logo?: string;

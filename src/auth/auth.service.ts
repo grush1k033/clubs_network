@@ -65,7 +65,6 @@ export class AuthService {
             verificationToken
         );
 
-        // НЕ вызываем this.auth() — ждём подтверждения!
         return {
             message: 'Регистрация успешна. Проверьте почту для подтверждения.'
         };

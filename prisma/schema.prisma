@@ -39,6 +39,7 @@ model User {
 model Club {
   id           Int        @id @default(autoincrement())
   name         String     @unique
+  city         String?    @default(dbgenerated("NULL"))
   address      String
   phone        String?
   email        String?
