@@ -16,6 +16,7 @@ import {Authorization} from "./decorators/authorization.decorator";
 import {Authorized} from "./decorators/authorized.decorator";
 import {User} from "@prisma/client";
 import {ConfigService} from "@nestjs/config";
+import {ForgotPasswordDto, ResetPasswordDto} from "./dto/forgot-password.dto";
 
 @Controller('auth')
 export class AuthController {
@@ -110,5 +111,19 @@ export class AuthController {
     @ApiOperation({ summary: 'Повторная отправка письма подтверждения' })
     async resendVerification(@Body('email') email: string) {
         return this.authService.resendVerificationEmail(email);
+    }
+
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Запрос на сброс пароля' })
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        return this.authService.forgotPassword(dto);
+    }
+
+    @Post('reset-password')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Сброс пароля' })
+    async resetPassword(@Body() dto: ResetPasswordDto) {
+        return this.authService.resetPassword(dto);
     }
 }

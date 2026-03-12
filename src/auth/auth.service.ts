@@ -16,6 +16,9 @@ import type { Response } from 'express';
 import type { Request } from 'express';
 import {isDev} from "../utils/is-dev.util";
 import {MailService} from "../mail/mail.service";
+import {ForgotPasswordDto, ResetPasswordDto} from "./dto/forgot-password.dto";
+import {randomBytes} from "node:crypto";
+import { addHours } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -97,30 +100,49 @@ export class AuthService {
     }
 
     async refresh(req: Request, res: Response) {
-        const refreshToken = req.cookies['refreshToken'];
+        try {
+            const refreshToken = req.cookies['refreshToken'];
 
-        if(!refreshToken) {
-            throw new  UnauthorizedException('Недействительный refresh-токен')
-        }
-
-        const payload: JwtPayload = await this.jwtService.verifyAsync(refreshToken);
-
-        if (payload) {
-            const user = await this.prismaService.user.findUnique({
-                where: {
-                    id: payload.id,
-                },
-                select: {
-                    id: true
-                }
-            })
-
-            if(!user) {
-                throw new NotFoundException('Пользователь не найден')
+            if (!refreshToken) {
+                this.clearAuthCookies(res);
+                throw new UnauthorizedException('Недействительный refresh-токен');
             }
 
-            return this.auth(res, user.id)
+            let payload: JwtPayload;
+            try {
+                payload = await this.jwtService.verifyAsync(refreshToken);
+            } catch {
+                this.clearAuthCookies(res);
+                throw new UnauthorizedException('Refresh-токен истёк или недействителен');
+            }
+
+            const user = await this.prismaService.user.findUnique({
+                where: { id: payload.id },
+                select: { id: true }
+            });
+
+            if (!user) {
+                this.clearAuthCookies(res);
+                throw new UnauthorizedException('Пользователь не найден');
+            }
+
+            return this.auth(res, user.id);
+
+        } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            this.clearAuthCookies(res);
+            throw new UnauthorizedException('Ошибка обновления токена');
         }
+    }
+
+    private clearAuthCookies(res: Response) {
+        res.cookie('refreshToken', '', {
+            httpOnly: true,
+            expires: new Date(0),
+            path: '/'
+        });
     }
 
     async logout(res: Response) {
@@ -242,6 +264,83 @@ export class AuthService {
             sameSite: isDevelopment ? 'lax' : 'none',
             path: '/'
         });
+    }
+
+    async forgotPassword(dto: ForgotPasswordDto) {
+        const user = await this.prismaService.user.findUnique({
+            where: { email: dto.email }
+        });
+
+        if (!user) {
+            // Не говорим, что пользователь не найден (безопасность)
+            return { message: 'Если email существует, инструкции отправлены' };
+        }
+
+        // Генерируем случайный токен
+        const token = randomBytes(32).toString('hex');
+
+        // Удаляем старые токены этого пользователя
+        await this.prismaService.passwordResetToken.deleteMany({
+            where: { userId: user.id }
+        });
+
+        await this.prismaService.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token,
+                expiresAt: addHours(new Date(), 1),
+            }
+        });
+
+        // Отправляем письмо
+        const resetLink = `${this.configService.get('CLIENT_URL')}/auth/reset-password?token=${token}`;
+
+        await this.mailService.sendPasswordResetEmail(
+            user.email,
+            user.name || 'Пользователь',
+            resetLink
+        );
+
+        return { message: 'Инструкции отправлены на email' };
+    }
+
+    async resetPassword(dto: ResetPasswordDto) {
+        const resetToken = await this.prismaService.passwordResetToken.findUnique({
+            where: { token: dto.token },
+            include: { user: true }
+        });
+
+        if (!resetToken) {
+            throw new BadRequestException('Недействительный токен');
+        }
+
+        if (resetToken.used) {
+            throw new BadRequestException('Токен уже использован');
+        }
+
+        if (resetToken.expiresAt < new Date()) {
+            throw new BadRequestException('Токен истёк');
+        }
+
+        // Хешируем новый пароль
+        const hashedPassword = await hash(dto.password);
+
+        // Обновляем пароль пользователя
+        await this.prismaService.user.update({
+            where: { id: resetToken.userId },
+            data: { password: hashedPassword }
+        });
+
+        // Помечаем токен как использованный
+        await this.prismaService.passwordResetToken.update({
+            where: { id: resetToken.id },
+            data: { used: true }
+        });
+
+        // Опционально: удаляем все refresh токены пользователя
+        // чтобы завершить все активные сессии
+
+        return { message: 'Пароль успешно изменён' };
     }
 }
 

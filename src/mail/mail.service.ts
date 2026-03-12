@@ -87,4 +87,47 @@ export class MailService {
             throw new Error(`Ошибка отправки письма: ${error.message}`);
         }
     }
+
+    async sendPasswordResetEmail(to: string, name: string, resetLink: string) {
+        this.logger.log(`Отправка письма для сброса пароля на: ${to}`);
+
+        try {
+            await this.oAuth2Client.getAccessToken();
+
+            const templatePath = path.join(__dirname, 'templates', 'reset-password.html');
+            const templateSource = fs.readFileSync(templatePath, 'utf8');
+            const template = handlebars.compile(templateSource);
+            const html = template({ name, resetLink });
+
+            const utf8Subject = `=?utf-8?B?${Buffer.from('Сброс пароля').toString('base64')}?=`;
+            const messageParts = [
+                `From: "Clubs Network" <${this.configService.get('GMAIL_USER')}>`,
+                `To: ${to}`,
+                'Content-Type: text/html; charset=utf-8',
+                'MIME-Version: 1.0',
+                `Subject: ${utf8Subject}`,
+                '',
+                html,
+            ];
+            const message = messageParts.join('\n');
+
+            const encodedMessage = Buffer.from(message)
+                .toString('base64')
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+
+            const res = await this.gmail.users.messages.send({
+                userId: 'me',
+                requestBody: { raw: encodedMessage },
+            });
+
+            this.logger.log(`Письмо отправлено! ID: ${res.data.id}`);
+            return res.data;
+
+        } catch (error) {
+            this.logger.error('Ошибка отправки письма:', error);
+            throw new Error(`Ошибка отправки письма: ${error.message}`);
+        }
+    }
 }

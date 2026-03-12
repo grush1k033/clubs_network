@@ -28,12 +28,25 @@ model User {
 
   transactions  Transaction[]
   pushSubscriptions PushSubscription[]
+  password_reset_tokens PasswordResetToken[]
 
   club          Club?         @relation(fields: [clubId], references: [id])
   tariff        Tariff?       @relation(fields: [tariffId], references: [id])
 
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
 }
 
 model Club {
