@@ -16,7 +16,7 @@ async function bootstrap() {
                 'http://localhost:4200',
                 'http://138.68.94.59',
                 'https://clubs-network.onrender.com',
-                'http://192.168.100.52',
+                'http://192.168.100.52:4200',
             ];
 
             if (!origin || allowedOrigins.includes(origin)) {
