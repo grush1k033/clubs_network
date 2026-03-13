@@ -6,7 +6,7 @@ export class LoginDto {
         description: 'Почтовый адрес',
         example: 'example@gmail.com'
     })
-    @IsEmail()
+    @IsEmail({}, { message: 'Некорректный email' })
     @IsNotEmpty()
     email: string;
 
