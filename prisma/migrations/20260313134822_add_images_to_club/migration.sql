@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "clubs" ADD COLUMN     "images" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "city" SET DEFAULT NULL;

@@ -58,6 +58,7 @@ model Club {
   email        String?
   description  String?
   logo         String?
+  images       String[]   @default([])
   status       ClubStatus @default(active)
   workingHours Json?
   createdAt    DateTime   @default(now()) @map("created_at")

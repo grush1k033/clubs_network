@@ -44,13 +44,8 @@ export class ClubsService {
         const club = await this.prisma.club.findUnique({
             where: { id },
             include: {
-                users: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                    },
+                _count: {
+                    select: { users: true },
                 },
             },
         });
@@ -59,7 +54,12 @@ export class ClubsService {
             throw new NotFoundException(`Клуб с ID ${id} не найден`);
         }
 
-        return club;
+        const { _count, ...clubData } = club;
+
+        return {
+            ...clubData,
+            usersCount: _count.users,
+        };
     }
 
     // Обновление клуба (с возможной заменой логотипа)
