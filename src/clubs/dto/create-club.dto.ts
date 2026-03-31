@@ -4,7 +4,7 @@ import {
     IsOptional,
     IsEmail,
     MaxLength,
-    IsJSON,
+    IsJSON, IsArray,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -24,6 +24,20 @@ export class CreateClubDto {
     @IsString({ message: 'Город должен быть строкой' })
     @IsNotEmpty({ message: 'Город обязателен' })
     city: string;  // ← новое поле
+
+    @ApiProperty({
+        description: 'Массив ссылок на фотографии клуба (загружаются в Cloudinary)',
+        example: [
+            'https://res.cloudinary.com/dk9i69mvn/image/upload/v1/clubs/gym-1.jpg',
+            'https://res.cloudinary.com/dk9i69mvn/image/upload/v1/clubs/gym-2.jpg'
+        ],
+        required: false,
+        type: [String]
+    })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    images?: string[];
 
     @ApiProperty({
         description: 'Адрес клуба',

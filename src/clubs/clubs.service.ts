@@ -11,12 +11,21 @@ export class ClubsService {
         private uploadService: UploadService,
     ) {}
 
-    // Создание клуба (с возможным логотипом)
-    async create(dto: CreateClubDto, file?: Express.Multer.File) {
+    async create(dto: CreateClubDto, files?: Express.Multer.File[]) {
         let logoUrl: string | undefined;
+        let images: string[] = [];
 
-        if (file) {
-            logoUrl = await this.uploadService.uploadImage(file, 'clubs-logos');
+        if (files && files.length > 0) {
+
+            logoUrl = await this.uploadService.uploadImage(files[0], 'clubs-logos');
+
+            if (files.length > 1) {
+                images = await Promise.all(
+                    files.slice(1).map(file =>
+                        this.uploadService.uploadImage(file, `club-images/${Date.now()}`)
+                    )
+                );
+            }
         }
 
         try {
@@ -24,6 +33,7 @@ export class ClubsService {
                 data: {
                     ...dto,
                     logo: logoUrl || dto.logo,
+                    images, // ← сохраняем массив
                 },
             });
         } catch (error) {
@@ -34,12 +44,10 @@ export class ClubsService {
         }
     }
 
-    // Получение всех клубов
     async findAll() {
         return this.prisma.club.findMany();
     }
 
-    // Получение одного клуба по id (с пользователями)
     async findOne(id: number) {
         const club = await this.prisma.club.findUnique({
             where: { id },
@@ -62,22 +70,30 @@ export class ClubsService {
         };
     }
 
-    // Обновление клуба (с возможной заменой логотипа)
-    async update(id: number, dto: UpdateClubDto, file?: Express.Multer.File) {
-        await this.findOne(id);
+    async update(id: number, dto: UpdateClubDto, files?: Express.Multer.File[]) {
+        const oldClub = await this.findOne(id);
 
         let logoUrl: string | undefined;
+        let images: string[] = oldClub.images || [];
 
-        if (file) {
-            const oldClub = await this.findOne(id);
+        if (files && files.length > 0) {
+            // Обновляем логотип (если есть)
             if (oldClub.logo) {
                 const publicId = this.uploadService.extractPublicIdFromUrl(oldClub.logo);
                 if (publicId) {
                     await this.uploadService.deleteImage(publicId).catch(() => {});
                 }
             }
+            logoUrl = await this.uploadService.uploadImage(files[0], `club-${id}`);
 
-            logoUrl = await this.uploadService.uploadImage(file, `club-${id}`);
+            if (files.length > 1) {
+                const newImages = await Promise.all(
+                    files.slice(1).map(file =>
+                        this.uploadService.uploadImage(file, `club-images/${id}-${Date.now()}`)
+                    )
+                );
+                images = [...images, ...newImages]; // добавляем к существующим
+            }
         }
 
         return this.prisma.club.update({
@@ -85,31 +101,28 @@ export class ClubsService {
             data: {
                 ...dto,
                 logo: logoUrl || dto.logo,
+                images, // ← обновляем массив
             },
         });
     }
 
-    // Удаление клуба
     async remove(id: number) {
         const club = await this.findOne(id);
 
-        // 1. Отвязываем всех пользователей от клуба
         await this.prisma.user.updateMany({
             where: { clubId: id },
             data: {
                 clubId: null,
-                tariffId: null, // сбрасываем тариф
+                tariffId: null,
                 startDate: null,
                 endDate: null,
                 paid: false,
                 paidAt: null,
-                // Для сотрудников тоже сбрасываем поля
                 position: null,
                 hiredAt: null,
             },
         });
 
-        // 2. Удаляем логотип из Cloudinary
         if (club.logo) {
             const publicId = this.uploadService.extractPublicIdFromUrl(club.logo);
             if (publicId) {
@@ -117,7 +130,17 @@ export class ClubsService {
             }
         }
 
-        // 3. Удаляем сам клуб
+        if (club.images && club.images.length > 0) {
+            await Promise.all(
+                club.images.map(async (imageUrl) => {
+                    const publicId = this.uploadService.extractPublicIdFromUrl(imageUrl);
+                    if (publicId) {
+                        await this.uploadService.deleteImage(publicId).catch(() => {});
+                    }
+                })
+            );
+        }
+
         return this.prisma.club.delete({
             where: { id },
         });

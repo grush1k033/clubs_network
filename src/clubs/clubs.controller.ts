@@ -11,9 +11,9 @@ import {
     HttpStatus,
     UseGuards,
     UseInterceptors,
-    UploadedFile,
+    UploadedFile, UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {FileInterceptor, FilesInterceptor} from '@nestjs/platform-express';
 import { ClubsService } from './clubs.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
@@ -30,13 +30,12 @@ export class ClubsController {
     // Создание клуба (только super_admin)
     @Post()
     @Roles(Role.SUPER_ADMIN)
-    @UseInterceptors(FileInterceptor('file'))
-    @HttpCode(HttpStatus.CREATED)
+    @UseInterceptors(FilesInterceptor('files'))
     async create(
         @Body() dto: CreateClubDto,
-        @UploadedFile() file?: Express.Multer.File,
+        @UploadedFiles() files?: Express.Multer.File[],
     ) {
-        return this.clubsService.create(dto, file);
+        return this.clubsService.create(dto, files);
     }
 
     // Все клубы (доступно всем авторизованным)
@@ -54,13 +53,13 @@ export class ClubsController {
     // Обновление клуба (super_admin или club_admin этого клуба)
     @Patch(':id')
     @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FilesInterceptor('files'))
     async update(
         @Param('id', ParseIntPipe) id: number,
         @Body() dto: UpdateClubDto,
-        @UploadedFile() file?: Express.Multer.File,
+        @UploadedFiles() files?: Express.Multer.File[],
     ) {
-        return this.clubsService.update(id, dto, file);
+        return this.clubsService.update(id, dto, files);
     }
 
     // Удаление клуба (только super_admin)
