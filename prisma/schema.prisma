@@ -26,13 +26,15 @@ model User {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   balance       Balance?
 
-  transactions  Transaction[]
-  pushSubscriptions PushSubscription[]
+  transactions        Transaction[]
+  pushSubscriptions   PushSubscription[]
   password_reset_tokens PasswordResetToken[]
+  workoutsAsTrainer   Workout[]          @relation("TrainerWorkouts")
+  attendanceRecords   Attendance[]
+  reviews             Review[]
 
   club          Club?         @relation(fields: [clubId], references: [id])
   tariff        Tariff?       @relation(fields: [tariffId], references: [id])
-
 
   @@map("users")
 }
@@ -65,6 +67,8 @@ model Club {
   updatedAt    DateTime   @updatedAt @map("updated_at")
   tariffs      Tariff[]
   users        User[]
+  workouts     Workout[]
+  reviews      Review[]
 
   @@map("clubs")
 }
@@ -128,6 +132,61 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+model Workout {
+  id                 Int            @id @default(autoincrement())
+  clubId             Int
+  trainerId          Int
+  title              String
+  description        String?
+  startTime          DateTime
+  endTime            DateTime
+  maxParticipants    Int
+  currentParticipants Int           @default(0)
+  status             WorkoutStatus  @default(scheduled)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  club   Club @relation(fields: [clubId], references: [id])
+  trainer User @relation("TrainerWorkouts", fields: [trainerId], references: [id])
+  attendance Attendance[]
+
+  @@map("workouts")
+}
+
+model Attendance {
+  id           Int              @id @default(autoincrement())
+  workoutId    Int
+  userId       Int
+  status       AttendanceStatus @default(registered)
+  registeredAt DateTime         @default(now())
+  attendedAt   DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  workout Workout @relation(fields: [workoutId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("attendance")
+}
+
+model Review {
+  id           Int      @id @default(autoincrement())
+  clubId       Int
+  userId       Int
+  rating       Int
+  comment      String?
+  isModerated  Boolean  @default(false)
+  moderatedBy  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("reviews")
+}
+
 enum Role {
   super_admin
   club_admin
@@ -154,4 +213,19 @@ enum TransactionType {
   payment
   failed_payment
   refund
+}
+
+enum WorkoutStatus {
+  scheduled
+  ongoing
+  completed
+  cancelled
+}
+
+enum AttendanceStatus {
+  registered
+  confirmed
+  attended
+  cancelled
+  no_show
 }
