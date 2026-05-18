@@ -79,49 +79,69 @@ export class PaymentsService {
 
     async handleWebhook(body: any) {
         const event = body;
+        console.log('📥 Webhook received:', event.event);
 
         switch (event.event) {
             case 'payment.succeeded':
-                const payment = event.object;
-                const userId = parseInt(payment.metadata.userId);
-                const type = payment.metadata.type;
-                const amount = parseFloat(payment.amount.value);
+                try {
+                    const payment = event.object;
+                    console.log('💰 Payment succeeded:', {
+                        id: payment.id,
+                        amount: payment.amount.value,
+                        status: payment.status,
+                        metadata: payment.metadata
+                    });
 
-                if (type === 'deposit') {
-                    // Только пополнение баланса
-                    await this.usersService.deposit(
-                        userId,
-                        amount,
-                        `Пополнение через ЮKassa (платеж ${payment.id})`
-                    );
-                    return {
-                        received: true,
-                        message: 'Баланс пополнен',
-                    };
-                } else {
-                    // Пополнение баланса + активация членства
-                    const tariffId = parseInt(payment.metadata.tariffId);
-                    const clubId = parseInt(payment.metadata.clubId);
+                    const userId = parseInt(payment.metadata.userId);
+                    const type = payment.metadata.type;
+                    const amount = parseFloat(payment.amount.value);
 
-                    await this.usersService.deposit(
-                        userId,
-                        amount,
-                        `Пополнение через ЮKassa (платеж ${payment.id})`
-                    );
+                    console.log(`📊 Parsed data: userId=${userId}, type=${type}, amount=${amount}`);
 
-                    await this.usersService.activateMembership(userId, clubId, tariffId);
+                    if (type === 'deposit') {
+                        console.log('💼 Processing deposit...');
+                        await this.usersService.deposit(
+                            userId,
+                            amount,
+                            `Пополнение через ЮKassa (платеж ${payment.id})`
+                        );
+                        console.log('✅ Deposit successful for user', userId);
+                        return {
+                            received: true,
+                            message: 'Баланс пополнен',
+                        };
+                    } else {
+                        console.log('🎟️ Processing membership purchase...');
+                        const tariffId = parseInt(payment.metadata.tariffId);
+                        const clubId = parseInt(payment.metadata.clubId);
+                        console.log(`TariffId: ${tariffId}, ClubId: ${clubId}`);
 
-                    return {
-                        received: true,
-                        message: 'Баланс пополнен, членство активировано',
-                    };
+                        await this.usersService.deposit(
+                            userId,
+                            amount,
+                            `Пополнение через ЮKassa (платеж ${payment.id})`
+                        );
+                        console.log('✅ Deposit successful');
+
+                        await this.usersService.activateMembership(userId, clubId, tariffId);
+                        console.log('✅ Membership activated');
+
+                        return {
+                            received: true,
+                            message: 'Баланс пополнен, членство активировано',
+                        };
+                    }
+                } catch (error) {
+                    console.error('❌ Error processing webhook:', error);
+                    throw error;
                 }
 
             case 'payment.waiting_for_capture':
-                console.log('Платёж ожидает подтверждения:', event.object.id);
+                console.log('⏳ Платёж ожидает подтверждения:', event.object.id);
                 return { received: true };
 
             case 'payment.canceled':
+                console.log('❌ Платёж отменён:', event.object.id);
                 const failedPayment = event.object;
                 const failedUserId = parseInt(failedPayment.metadata?.userId || '0');
 
@@ -131,6 +151,7 @@ export class PaymentsService {
                         parseFloat(failedPayment.amount.value),
                         `Неудачная попытка пополнения через ЮKassa (платеж ${failedPayment.id})`
                     );
+                    console.log('📝 Failed transaction recorded for user', failedUserId);
                 }
 
                 return {
@@ -139,7 +160,7 @@ export class PaymentsService {
                 };
 
             default:
-                console.log('Необработанное событие:', event.event);
+                console.log('⚠️ Необработанное событие:', event.event);
                 return { received: true };
         }
     }
