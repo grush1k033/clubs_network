@@ -333,4 +333,46 @@ export class UsersService {
             orderBy: { startTime: 'desc' },
         });
     }
+
+    async getTrainersByClub(clubId: number) {
+        return this.prisma.user.findMany({
+            where: {
+                clubId,
+                role: 'trainer',
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                position: true,
+            },
+            orderBy: { name: 'asc' },
+        });
+    }
+
+    async getTrainerWorkoutsForClient(trainerId: number) {
+        // Проверяем, что это тренер
+        const trainer = await this.prisma.user.findUnique({
+            where: { id: trainerId },
+        });
+        if (!trainer || trainer.role !== 'trainer') {
+            throw new BadRequestException('Тренер не найден');
+        }
+
+        return this.prisma.workout.findMany({
+            where: {
+                trainerId,
+                startTime: { gt: new Date() }, // только будущие тренировки
+            },
+            select: {
+                id: true,
+                title: true,
+                startTime: true,
+                endTime: true,
+                maxParticipants: true,
+                currentParticipants: true,
+            },
+            orderBy: { startTime: 'asc' },
+        });
+    }
 }

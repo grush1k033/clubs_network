@@ -151,4 +151,22 @@ export class UsersController {
         }
         return this.usersService.getTrainerWorkouts(user.id);
     }
+
+    // Для клиента: получить всех тренеров клуба (по clubId пользователя)
+    @Get('club-trainers')
+    @UseGuards(JwtGuard)
+    async getClubTrainers(@Authorized() user: User) {
+        const clubId = user.clubId;
+        if (!clubId) {
+            throw new BadRequestException('Вы не привязаны к клубу');
+        }
+        return this.usersService.getTrainersByClub(clubId);
+    }
+
+// Для клиента: получить тренировки конкретного тренера (по id тренера)
+    @Get('trainer-workouts/:id')
+    @UseGuards(JwtGuard)
+    async getTrainerWorkoutsForClient(@Param('id', ParseIntPipe) trainerId: number) {
+        return this.usersService.getTrainerWorkoutsForClient(trainerId);
+    }
 }
