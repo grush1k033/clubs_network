@@ -133,4 +133,22 @@ export class UsersController {
         }
         return this.usersService.getTrainerStats(user.id);
     }
+
+    @Get('trainer/students')
+    @UseGuards(JwtGuard)
+    async getTrainerStudents(@Authorized() user: User) {
+        if (user.role !== 'trainer') {
+            throw new BadRequestException('Только тренер может получить список участников');
+        }
+        return this.usersService.getTrainerStudents(user.id);
+    }
+
+    @Get('trainer/workouts')
+    @UseGuards(JwtGuard)
+    async getTrainerWorkouts(@Authorized() user: User) {
+        if (user.role !== 'trainer') {
+            throw new BadRequestException('Только тренер может получить список тренировок');
+        }
+        return this.usersService.getTrainerWorkouts(user.id);
+    }
 }

@@ -313,4 +313,24 @@ export class UsersService {
 
         return { totalStudents, totalWorkouts };
     }
+
+    async getTrainerStudents(trainerId: number) {
+        return this.prisma.user.findMany({
+            where: { trainerId, role: 'member' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    async getTrainerWorkouts(trainerId: number) {
+        return this.prisma.workout.findMany({
+            where: { trainerId },
+            orderBy: { startTime: 'desc' },
+        });
+    }
 }
