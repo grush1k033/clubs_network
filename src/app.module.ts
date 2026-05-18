@@ -10,6 +10,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { MailModule } from './mail/mail.module';
 import { CronModule } from './cron/cron.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
     imports: [
@@ -29,7 +30,8 @@ import { NotificationsModule } from './notifications/notifications.module';
         PaymentsModule,
         MailModule,
         CronModule,
-        NotificationsModule
+        NotificationsModule,
+        AttendanceModule
     ],
 })
 export class AppModule {}
