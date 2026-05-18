@@ -12,6 +12,7 @@ import { CronModule } from './cron/cron.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { TransactionsModule } from './transactions/transactions.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
     imports: [
@@ -33,7 +34,8 @@ import { TransactionsModule } from './transactions/transactions.module';
         CronModule,
         NotificationsModule,
         AttendanceModule,
-        TransactionsModule
+        TransactionsModule,
+        ReviewsModule
     ],
 })
 export class AppModule {}
