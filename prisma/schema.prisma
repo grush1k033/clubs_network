@@ -22,19 +22,25 @@ model User {
   paidAt        DateTime?     @map("paid_at")
   position      String?
   hiredAt       DateTime?     @map("hired_at")
+  trainerId     Int?          @map("trainer_id")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
-  balance       Balance?
 
-  transactions        Transaction[]
-  pushSubscriptions   PushSubscription[]
+  balance           Balance?
+  transactions      Transaction[]
+  pushSubscriptions PushSubscription[]
   password_reset_tokens PasswordResetToken[]
-  workoutsAsTrainer   Workout[]          @relation("TrainerWorkouts")
-  attendanceRecords   Attendance[]
-  reviews             Review[]
 
   club          Club?         @relation(fields: [clubId], references: [id])
   tariff        Tariff?       @relation(fields: [tariffId], references: [id])
+
+  // Обратные связи (добавить!)
+  workoutsAsTrainer Workout[]  @relation("TrainerWorkouts")
+  attendanceRecords Attendance[]
+  reviews           Review[]
+
+  trainer   User?   @relation("UserTrainer", fields: [trainerId], references: [id])
+  students  User[]  @relation("UserTrainer")
 
   @@map("users")
 }
@@ -42,11 +48,11 @@ model User {
 model PasswordResetToken {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
 }
@@ -54,21 +60,21 @@ model PasswordResetToken {
 model Club {
   id           Int        @id @default(autoincrement())
   name         String     @unique
-  city         String?    @default(dbgenerated("NULL"))
   address      String
   phone        String?
   email        String?
   description  String?
   logo         String?
-  images       String[]   @default([])
   status       ClubStatus @default(active)
   workingHours Json?
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
+  city         String?
+  images       String[]   @default([])
+  reviews      Review[]
   tariffs      Tariff[]
   users        User[]
   workouts     Workout[]
-  reviews      Review[]
 
   @@map("clubs")
 }
@@ -120,35 +126,34 @@ model Transaction {
 model PushSubscription {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   endpoint  String   @unique
   p256dh    String
   auth      String
   userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, endpoint])
   @@map("push_subscriptions")
 }
 
 model Workout {
-  id                 Int            @id @default(autoincrement())
-  clubId             Int
-  trainerId          Int
-  title              String
-  description        String?
-  startTime          DateTime
-  endTime            DateTime
-  maxParticipants    Int
+  id                  Int           @id @default(autoincrement())
+  clubId              Int
+  trainerId           Int
+  title               String
+  description         String?
+  startTime           DateTime
+  endTime             DateTime
+  maxParticipants     Int
   currentParticipants Int           @default(0)
-  status             WorkoutStatus  @default(scheduled)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-
-  club   Club @relation(fields: [clubId], references: [id])
-  trainer User @relation("TrainerWorkouts", fields: [trainerId], references: [id])
-  attendance Attendance[]
+  status              WorkoutStatus @default(scheduled)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  attendance          Attendance[]
+  club                Club          @relation(fields: [clubId], references: [id])
+  trainer             User          @relation("TrainerWorkouts", fields: [trainerId], references: [id])
 
   @@map("workouts")
 }
@@ -163,26 +168,24 @@ model Attendance {
   cancelledAt  DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
-
-  workout Workout @relation(fields: [workoutId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+  workout      Workout          @relation(fields: [workoutId], references: [id])
 
   @@map("attendance")
 }
 
 model Review {
-  id           Int      @id @default(autoincrement())
-  clubId       Int
-  userId       Int
-  rating       Int
-  comment      String?
-  isModerated  Boolean  @default(false)
-  moderatedBy  Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  club Club @relation(fields: [clubId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  clubId      Int
+  userId      Int
+  rating      Int
+  comment     String?
+  isModerated Boolean  @default(false)
+  moderatedBy Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  club        Club     @relation(fields: [clubId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("reviews")
 }

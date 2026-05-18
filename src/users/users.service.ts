@@ -299,4 +299,18 @@ export class UsersService {
             },
         });
     }
+
+    async getTrainerStats(userId: number) {
+        // Количество участников, закреплённых за тренером
+        const totalStudents = await this.prisma.user.count({
+            where: { trainerId: userId, role: 'member' },
+        });
+
+        // Количество тренировок, которые вёл тренер
+        const totalWorkouts = await this.prisma.workout.count({
+            where: { trainerId: userId },
+        });
+
+        return { totalStudents, totalWorkouts };
+    }
 }
