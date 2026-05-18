@@ -34,7 +34,7 @@ export class PaymentsService {
                 },
                 confirmation: {
                     type: 'redirect',
-                    return_url: 'https://clubs-network.onrender.com/clubs',
+                    return_url: 'http://localhost:4200/clubs',
                 },
                 capture: true,
                 description,
