@@ -8,39 +8,32 @@ datasource db {
 }
 
 model User {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique
-  password      String
-  name          String?
-  role          Role          @default(user)
-  emailVerified Boolean       @default(false)
-  clubId        Int?          @map("club_id")
-  tariffId      Int?          @map("tariff_id")
-  startDate     DateTime?     @map("start_date")
-  endDate       DateTime?     @map("end_date")
-  paid          Boolean?      @default(false)
-  paidAt        DateTime?     @map("paid_at")
-  position      String?
-  hiredAt       DateTime?     @map("hired_at")
-  trainerId     Int?          @map("trainer_id")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  balance           Balance?
-  transactions      Transaction[]
-  pushSubscriptions PushSubscription[]
+  id                    Int                  @id @default(autoincrement())
+  email                 String               @unique
+  password              String
+  name                  String?
+  role                  Role                 @default(user)
+  emailVerified         Boolean              @default(false)
+  clubId                Int?                 @map("club_id")
+  tariffId              Int?                 @map("tariff_id")
+  startDate             DateTime?            @map("start_date")
+  endDate               DateTime?            @map("end_date")
+  paid                  Boolean?             @default(false)
+  paidAt                DateTime?            @map("paid_at")
+  position              String?
+  hiredAt               DateTime?            @map("hired_at")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  trainerId             Int?                 @map("trainer_id")
+  attendanceRecords     Attendance[]
+  balance               Balance?
   password_reset_tokens PasswordResetToken[]
-
-  club          Club?         @relation(fields: [clubId], references: [id])
-  tariff        Tariff?       @relation(fields: [tariffId], references: [id])
-
-  // Обратные связи (добавить!)
-  workoutsAsTrainer Workout[]  @relation("TrainerWorkouts")
-  attendanceRecords Attendance[]
-  reviews           Review[]
-
-  trainer   User?   @relation("UserTrainer", fields: [trainerId], references: [id])
-  students  User[]  @relation("UserTrainer")
+  pushSubscriptions     PushSubscription[]
+  reviews               Review[]
+  transactions          Transaction[]
+  club                  Club?                @relation(fields: [clubId], references: [id])
+  tariff                Tariff?              @relation(fields: [tariffId], references: [id])
+  workoutsAsTrainer     Workout[]            @relation("TrainerWorkouts")
 
   @@map("users")
 }
