@@ -9,7 +9,7 @@ import {
     ParseIntPipe,
     UseGuards,
     HttpCode,
-    HttpStatus,
+    HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JoinClubDto } from './dto/join-club.dto';
@@ -123,5 +123,14 @@ export class UsersController {
     async remove(@Param('id', ParseIntPipe) id: number) {
         // TODO: добавить метод удаления в сервис
         // await this.usersService.remove(id);
+    }
+
+    @Get('trainer/stats')
+    @UseGuards(JwtGuard)
+    async getTrainerStats(@Authorized() user: User) {
+        if (user.role !== 'trainer') {
+            throw new BadRequestException('Только тренер может получить эту статистику');
+        }
+        return this.usersService.getTrainerStats(user.id);
     }
 }
