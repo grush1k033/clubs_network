@@ -11,6 +11,7 @@ import { MailModule } from './mail/mail.module';
 import { CronModule } from './cron/cron.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
     imports: [
@@ -31,7 +32,8 @@ import { AttendanceModule } from './attendance/attendance.module';
         MailModule,
         CronModule,
         NotificationsModule,
-        AttendanceModule
+        AttendanceModule,
+        TransactionsModule
     ],
 })
 export class AppModule {}
