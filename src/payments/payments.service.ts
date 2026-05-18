@@ -17,8 +17,8 @@ export class PaymentsService {
         this.apiKey = configService.get('YOOKASSA_API_KEY');
     }
 
-    async createPayment(amount: number, userId: number, description: string) {
-        const idempotenceKey = crypto.randomUUID(); // уникальный ключ для защиты от повторов
+    async createPayment(amount: number, userId: number, tariffId: number, clubId: number, description: string) {
+        const idempotenceKey = crypto.randomUUID();
 
         const response = await fetch(`${this.apiUrl}/payments`, {
             method: 'POST',
@@ -34,12 +34,14 @@ export class PaymentsService {
                 },
                 confirmation: {
                     type: 'redirect',
-                    return_url: 'http://localhost:3001/success', // заменишь позже
+                    return_url: 'https://clubs-network.onrender.com/clubs',
                 },
-                capture: true, // сразу списываем деньги
+                capture: true,
                 description,
                 metadata: {
                     userId: userId.toString(),
+                    tariffId: tariffId.toString(),
+                    clubId: clubId.toString(),
                 },
             }),
         });
@@ -82,18 +84,23 @@ export class PaymentsService {
             case 'payment.succeeded':
                 const payment = event.object;
                 const userId = parseInt(payment.metadata.userId);
+                const tariffId = parseInt(payment.metadata.tariffId);
+                const clubId = parseInt(payment.metadata.clubId);
                 const amount = parseFloat(payment.amount.value);
 
-                // Успешное пополнение
+                // Пополнение баланса
                 await this.usersService.deposit(
                     userId,
                     amount,
                     `Пополнение через ЮKassa (платеж ${payment.id})`
                 );
 
+                // Активация членства
+                await this.usersService.activateMembership(userId, clubId, tariffId);
+
                 return {
                     received: true,
-                    message: 'Баланс пополнен',
+                    message: 'Баланс пополнен, членство активировано',
                 };
 
             case 'payment.waiting_for_capture':
@@ -105,7 +112,6 @@ export class PaymentsService {
                 const failedUserId = parseInt(failedPayment.metadata?.userId || '0');
 
                 if (failedUserId) {
-
                     await this.usersService.createFailedTransaction(
                         failedUserId,
                         parseFloat(failedPayment.amount.value),
@@ -119,7 +125,6 @@ export class PaymentsService {
                 };
 
             default:
-                // Другие события просто логируем
                 console.log('Необработанное событие:', event.event);
                 return { received: true };
         }

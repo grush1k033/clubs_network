@@ -30,12 +30,12 @@ export class PaymentsController {
         @Authorized() user: User,
         @Body() dto: CreatePaymentDto,
     ) {
-        const description = dto.description || `Пополнение баланса пользователя ${user.email}`;
-
         const payment = await this.paymentsService.createPayment(
-            dto.amount, // 👈 берем из dto
+            dto.amount,
             user.id,
-            description,
+            dto.tariffId,
+            dto.clubId,
+            dto.description || `Пополнение баланса пользователя ${user.email}`,
         );
 
         return {

@@ -272,4 +272,31 @@ export class UsersService {
             },
         });
     }
+    async activateMembership(userId: number, clubId: number, tariffId: number) {
+        const tariff = await this.prisma.tariff.findUnique({ where: { id: tariffId } });
+        if (!tariff) {
+            throw new BadRequestException('Тариф не найден');
+        }
+
+        const startDate = new Date();
+        const endDate = new Date();
+        if (tariff.duration) {
+            endDate.setDate(endDate.getDate() + tariff.duration);
+        } else {
+            endDate.setHours(23, 59, 59, 999);
+        }
+
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                role: 'member',
+                clubId,
+                tariffId,
+                startDate,
+                endDate,
+                paid: true,
+                paidAt: new Date(),
+            },
+        });
+    }
 }

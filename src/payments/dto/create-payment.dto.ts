@@ -8,4 +8,10 @@ export class CreatePaymentDto {
     @IsString({ message: 'Описание должно быть строкой' })
     @IsOptional()
     description?: string;
+
+    @IsNumber({}, { message: 'ID тарифа должен быть числом' })
+    tariffId: number;
+
+    @IsNumber({}, { message: 'ID клуба должен быть числом' })
+    clubId: number;
 }
