@@ -84,24 +84,38 @@ export class PaymentsService {
             case 'payment.succeeded':
                 const payment = event.object;
                 const userId = parseInt(payment.metadata.userId);
-                const tariffId = parseInt(payment.metadata.tariffId);
-                const clubId = parseInt(payment.metadata.clubId);
+                const type = payment.metadata.type;
                 const amount = parseFloat(payment.amount.value);
 
-                // Пополнение баланса
-                await this.usersService.deposit(
-                    userId,
-                    amount,
-                    `Пополнение через ЮKassa (платеж ${payment.id})`
-                );
+                if (type === 'deposit') {
+                    // Только пополнение баланса
+                    await this.usersService.deposit(
+                        userId,
+                        amount,
+                        `Пополнение через ЮKassa (платеж ${payment.id})`
+                    );
+                    return {
+                        received: true,
+                        message: 'Баланс пополнен',
+                    };
+                } else {
+                    // Пополнение баланса + активация членства
+                    const tariffId = parseInt(payment.metadata.tariffId);
+                    const clubId = parseInt(payment.metadata.clubId);
 
-                // Активация членства
-                await this.usersService.activateMembership(userId, clubId, tariffId);
+                    await this.usersService.deposit(
+                        userId,
+                        amount,
+                        `Пополнение через ЮKassa (платеж ${payment.id})`
+                    );
 
-                return {
-                    received: true,
-                    message: 'Баланс пополнен, членство активировано',
-                };
+                    await this.usersService.activateMembership(userId, clubId, tariffId);
+
+                    return {
+                        received: true,
+                        message: 'Баланс пополнен, членство активировано',
+                    };
+                }
 
             case 'payment.waiting_for_capture':
                 console.log('Платёж ожидает подтверждения:', event.object.id);
@@ -161,5 +175,47 @@ export class PaymentsService {
         }
 
         return data;
+    }
+
+    async deposit(amount: number, userId: number, description: string) {
+        const idempotenceKey = crypto.randomUUID();
+
+        const response = await fetch(`${this.apiUrl}/payments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Basic ' + Buffer.from(`${this.shopId}:${this.apiKey}`).toString('base64'),
+                'Idempotence-Key': idempotenceKey,
+            },
+            body: JSON.stringify({
+                amount: {
+                    value: amount.toFixed(2),
+                    currency: 'RUB',
+                },
+                confirmation: {
+                    type: 'redirect',
+                    return_url: 'http://localhost:4200/profile',
+                },
+                capture: true,
+                description,
+                metadata: {
+                    userId: userId.toString(),
+                    type: 'deposit', // помечаем как пополнение
+                },
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new BadRequestException(data.description || 'Ошибка при создании платежа');
+        }
+
+        return {
+            paymentId: data.id,
+            confirmationUrl: data.confirmation.confirmation_url,
+            amount: data.amount,
+            status: data.status,
+        };
     }
 }

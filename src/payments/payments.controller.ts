@@ -16,6 +16,7 @@ import { Authorized } from '../auth/decorators/authorized.decorator';
 import { User } from '@prisma/client';
 import { Request } from 'express';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import {DepositDto} from "./dto/deposit.dto";
 
 @Controller('payments')
 export class PaymentsController {
@@ -77,5 +78,24 @@ export class PaymentsController {
         // TODO: добавить проверку роли (только super_admin)
         const refund = await this.paymentsService.refundPayment(paymentId, amount);
         return refund;
+    }
+
+    @Post('deposit')
+    @UseGuards(JwtGuard)
+    async deposit(
+        @Authorized() user: User,
+        @Body() dto: DepositDto,
+    ) {
+        const payment = await this.paymentsService.deposit(
+            dto.amount,
+            user.id,
+            dto.description || `Пополнение баланса пользователя ${user.email}`,
+        );
+
+        return {
+            success: true,
+            paymentId: payment.paymentId,
+            confirmationUrl: payment.confirmationUrl,
+        };
     }
 }
