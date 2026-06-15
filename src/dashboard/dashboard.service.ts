@@ -38,4 +38,42 @@ export class DashboardService {
             revenue: totalRevenue._sum.amount || 0,
         };
     }
+
+    async getRevenueByMonth(clubId?: number) {
+        const where: any = { type: 'deposit' };
+        if (clubId) {
+            where.clubId = clubId;
+        }
+
+        const transactions = await this.prisma.transaction.findMany({
+            where,
+            select: {
+                amount: true,
+                createdAt: true,
+            },
+        });
+
+        // Группируем по месяцам (последние 6 месяцев)
+        const months: Record<string, number> = {};
+        const now = new Date();
+
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+            months[key] = 0;
+        }
+
+        for (const tx of transactions) {
+            const date = new Date(tx.createdAt);
+            const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+            if (months[key] !== undefined) {
+                months[key] += tx.amount;
+            }
+        }
+
+        return Object.entries(months).map(([month, revenue]) => ({
+            month,
+            revenue,
+        }));
+    }
 }

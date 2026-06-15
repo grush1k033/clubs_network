@@ -15,4 +15,11 @@ export class DashboardController {
         const clubId = isSuperAdmin ? undefined : user.clubId;
         return this.dashboardService.getStats(clubId);
     }
+    @Get('revenue-by-month')
+    @UseGuards(JwtGuard)
+    async getRevenueByMonth(@Authorized() user: User) {
+        const isSuperAdmin = user.role === 'super_admin';
+        const clubId = isSuperAdmin ? undefined : user.clubId;
+        return this.dashboardService.getRevenueByMonth(clubId);
+    }
 }
