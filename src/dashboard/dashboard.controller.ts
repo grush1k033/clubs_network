@@ -22,4 +22,12 @@ export class DashboardController {
         const clubId = isSuperAdmin ? undefined : user.clubId;
         return this.dashboardService.getRevenueByMonth(clubId);
     }
+
+    @Get('best-selling-tariffs')
+    @UseGuards(JwtGuard)
+    async getBestSellingTariffs(@Authorized() user: User) {
+        const isSuperAdmin = user.role === 'super_admin';
+        const clubId = isSuperAdmin ? undefined : user.clubId;
+        return this.dashboardService.getBestSellingTariffs(clubId);
+    }
 }

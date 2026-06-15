@@ -76,4 +76,45 @@ export class DashboardService {
             revenue,
         }));
     }
+
+    async getBestSellingTariffs(clubId?: number) {
+        const where: any = { type: 'payment' };
+        if (clubId) {
+            where.clubId = clubId;
+        }
+
+        const purchases = await this.prisma.transaction.groupBy({
+            by: ['tariffId', 'clubId'],
+            where,
+            _count: { id: true },
+            orderBy: { _count: { id: 'desc' } },
+            take: 5,
+        });
+
+        const tariffIds = purchases.map(p => p.tariffId).filter(id => id !== null);
+        const tariffs = await this.prisma.tariff.findMany({
+            where: { id: { in: tariffIds as number[] } },
+            select: { id: true, name: true, clubId: true },
+        });
+
+        const clubs = await this.prisma.club.findMany({
+            where: { id: { in: purchases.map(p => p.clubId) } },
+            select: { id: true, name: true },
+        });
+
+        const totalCount = purchases.reduce((sum, p) => sum + p._count.id, 0);
+
+        const result = purchases.map(p => {
+            const tariff = tariffs.find(t => t.id === p.tariffId);
+            const club = clubs.find(c => c.id === p.clubId);
+            return {
+                tariff_name: tariff?.name || 'Неизвестный тариф',
+                club_name: club?.name || 'Неизвестный клуб',
+                purchases: p._count.id,
+                percentage: Math.round((p._count.id / totalCount) * 100),
+            };
+        });
+
+        return result;
+    }
 }
