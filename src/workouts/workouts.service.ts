@@ -10,6 +10,7 @@ export class WorkoutsService {
         const workout = await this.prisma.workout.findUnique({
             where: { id: workoutId },
         });
+
         if (!workout) {
             throw new BadRequestException('Тренировка не найдена');
         }
@@ -25,6 +26,7 @@ export class WorkoutsService {
         const existing = await this.prisma.attendance.findFirst({
             where: { workoutId, userId },
         });
+
         if (existing) {
             throw new BadRequestException('Вы уже записаны на эту тренировку');
         }
