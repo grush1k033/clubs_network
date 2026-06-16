@@ -153,7 +153,7 @@ export class UsersController {
     }
 
     // Для клиента: получить всех тренеров клуба (по clubId пользователя)
-    @Get('club-trainers')
+    @Get('my-club-trainers')
     @Roles(Role.USER, Role.MEMBER, Role.TRAINER, Role.CLUB_ADMIN, Role.SUPER_ADMIN)
     @UseGuards(JwtGuard)
     async getClubTrainers(@Authorized() user: User) {
