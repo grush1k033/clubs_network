@@ -30,4 +30,10 @@ export class DashboardController {
         const clubId = isSuperAdmin ? undefined : user.clubId;
         return this.dashboardService.getBestSellingTariffs(clubId);
     }
+
+    @Get('top-clubs')
+    @UseGuards(JwtGuard)
+    async getTopClubs() {
+        return this.dashboardService.getTopClubs();
+    }
 }

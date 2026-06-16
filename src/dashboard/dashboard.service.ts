@@ -117,4 +117,22 @@ export class DashboardService {
 
         return result;
     }
+
+    async getTopClubs(limit: number = 5) {
+        const result = await this.prisma.$queryRaw`
+        SELECT 
+            c.id,
+            c.name,
+            COUNT(DISTINCT u.id) as members,
+            COALESCE(SUM(t.amount), 0) as revenue
+        FROM clubs c
+        LEFT JOIN users u ON u.club_id = c.id
+        LEFT JOIN transactions t ON t.club_id = c.id AND t.type = 'deposit'
+        GROUP BY c.id, c.name
+        ORDER BY revenue DESC
+        LIMIT ${limit}
+    `;
+
+        return result;
+    }
 }
