@@ -119,22 +119,35 @@ export class DashboardService {
     }
 
     async getTopClubs(limit: number = 5) {
-        const result: any = await this.prisma.$queryRaw`
+        const result = await this.prisma.$queryRaw`
+            WITH club_revenue AS (
+                SELECT
+                    club_id,
+                    SUM(amount) as revenue
+                FROM transactions
+                WHERE type = 'deposit'
+                GROUP BY club_id
+            ),
+                 club_members AS (
+                     SELECT
+                         club_id,
+                         COUNT(*) as members
+                     FROM users
+                     GROUP BY club_id
+                 )
             SELECT
                 c.id,
                 c.name,
-                COUNT(DISTINCT u.id) as members,
-                COALESCE(SUM(t.amount), 0) as revenue
+                COALESCE(cm.members, 0) as members,
+                COALESCE(cr.revenue, 0) as revenue
             FROM clubs c
-                     LEFT JOIN users u ON u.club_id = c.id
-                     LEFT JOIN transactions t ON t.club_id = c.id AND t.type = 'deposit'
-            GROUP BY c.id, c.name
+                     LEFT JOIN club_members cm ON cm.club_id = c.id
+                     LEFT JOIN club_revenue cr ON cr.club_id = c.id
             ORDER BY revenue DESC
                 LIMIT ${limit}
         `;
 
-        // Преобразуем BigInt в Number
-        return result.map((club: any) => ({
+        return (result as any[]).map((club: any) => ({
             id: Number(club.id),
             name: club.name,
             members: Number(club.members),
