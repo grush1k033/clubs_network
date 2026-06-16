@@ -375,4 +375,48 @@ export class UsersService {
             orderBy: { startTime: 'asc' },
         });
     }
+
+    async getTrainerDetail(id: number) {
+        const trainer = await this.prisma.user.findUnique({
+            where: { id, role: 'trainer' },
+            include: {
+                club: {
+                    select: { name: true }
+                },
+                workoutsAsTrainer: {
+                    where: {
+                        startTime: { gte: new Date() }
+                    },
+                    orderBy: { startTime: 'asc' },
+                    select: {
+                        id: true,
+                        title: true,
+                        startTime: true,
+                        endTime: true,
+                        maxParticipants: true,
+                        currentParticipants: true,
+                    }
+                }
+            }
+        });
+
+        if (!trainer) {
+            throw new NotFoundException('Тренер не найден');
+        }
+
+        // Получаем студентов отдельно
+        const students = await this.prisma.user.findMany({
+            where: { trainerId: id, role: 'member' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+            }
+        });
+
+        return {
+            ...trainer,
+            students,
+        };
+    }
 }

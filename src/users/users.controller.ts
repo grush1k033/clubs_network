@@ -170,4 +170,11 @@ export class UsersController {
     async getTrainerWorkoutsForClient(@Param('id', ParseIntPipe) trainerId: number) {
         return this.usersService.getTrainerWorkoutsForClient(trainerId);
     }
+
+    @Get('trainer/:id')
+    @Roles(Role.USER, Role.MEMBER, Role.TRAINER, Role.CLUB_ADMIN, Role.SUPER_ADMIN)
+    @UseGuards(JwtGuard, RolesGuard)
+    async getTrainerDetail(@Param('id', ParseIntPipe) id: number) {
+        return this.usersService.getTrainerDetail(id);
+    }
 }
