@@ -24,7 +24,7 @@ import { Authorized } from '../auth/decorators/authorized.decorator';
 import { User } from '@prisma/client';
 
 @Controller('users')
-@UseGuards(JwtGuard, RolesGuard)
+@UseGuards(JwtGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
@@ -174,7 +174,11 @@ export class UsersController {
     @Get('trainer/:id')
     @Roles(Role.USER, Role.MEMBER, Role.TRAINER, Role.CLUB_ADMIN, Role.SUPER_ADMIN)
     @UseGuards(JwtGuard, RolesGuard)
-    async getTrainerDetail(@Param('id', ParseIntPipe) id: number) {
-        return this.usersService.getTrainerDetail(id);
+    async getTrainerDetail(@Param('id') id: string) {
+        const parsedId = +id;
+        if (isNaN(parsedId)) {
+            throw new BadRequestException('ID должен быть числом');
+        }
+        return this.usersService.getTrainerDetail(parsedId);
     }
 }
