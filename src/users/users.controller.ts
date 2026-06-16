@@ -28,7 +28,17 @@ import { User } from '@prisma/client';
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
-    // ========== БАЗОВЫЕ МЕТОДЫ ==========
+    @Get('my-club-trainers')
+    @UseGuards(JwtGuard)
+    async getMyClubTrainers(@Authorized() user: User) {
+        console.log('User ID:', user.id);
+        console.log('User ClubId:', user.clubId);
+        const clubId = user.clubId;
+        if (!clubId) {
+            throw new BadRequestException('Вы не привязаны к клубу');
+        }
+        return this.usersService.getTrainersByClub(clubId);
+    }
 
     // Все пользователи (только super_admin)
     @Get()
@@ -153,17 +163,7 @@ export class UsersController {
     }
 
     // Для клиента: получить всех тренеров клуба (по clubId пользователя)
-    @Get('my-club-trainers')
-    @UseGuards(JwtGuard)
-    async getMyClubTrainers(@Authorized() user: User) {
-        console.log('User ID:', user.id);
-        console.log('User ClubId:', user.clubId);
-        const clubId = user.clubId;
-        if (!clubId) {
-            throw new BadRequestException('Вы не привязаны к клубу');
-        }
-        return this.usersService.getTrainersByClub(clubId);
-    }
+
 
 // Для клиента: получить тренировки конкретного тренера (по id тренера)
     @Get('trainer-workouts/:id')
