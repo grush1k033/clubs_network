@@ -167,8 +167,8 @@ export class UsersController {
 // Для клиента: получить тренировки конкретного тренера (по id тренера)
     @Get('trainer-workouts/:id')
     @UseGuards(JwtGuard)
-    async getTrainerWorkoutsForClient(@Param('id', ParseIntPipe) trainerId: number) {
-        return this.usersService.getTrainerWorkoutsForClient(trainerId);
+    async getTrainerWorkoutsForClient(@Param('id') trainerId: string) {
+        return this.usersService.getTrainerWorkoutsForClient(Number(trainerId));
     }
 
     @Get('trainer/:id')
