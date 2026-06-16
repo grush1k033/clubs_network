@@ -154,9 +154,10 @@ export class UsersController {
 
     // Для клиента: получить всех тренеров клуба (по clubId пользователя)
     @Get('my-club-trainers')
-    @Roles(Role.USER, Role.MEMBER, Role.TRAINER, Role.CLUB_ADMIN, Role.SUPER_ADMIN)
     @UseGuards(JwtGuard)
-    async getClubTrainers(@Authorized() user: User) {
+    async getMyClubTrainers(@Authorized() user: User) {
+        console.log('User ID:', user.id);
+        console.log('User ClubId:', user.clubId);
         const clubId = user.clubId;
         if (!clubId) {
             throw new BadRequestException('Вы не привязаны к клубу');
