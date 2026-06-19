@@ -182,4 +182,46 @@ export class UsersController {
         }
         return this.usersService.getTrainerDetail(parsedId);
     }
+
+    // ========== НОВЫЕ ЭНДПОИНТЫ ДЛЯ АДМИН-ПАНЕЛИ ==========
+
+// Получить всех пользователей (для админ-панели)
+    @Get('admin')
+    @UseGuards(RolesGuard)
+    @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
+    async getAdminUsers(@Authorized() currentUser: User) {
+        const where: any = {};
+
+        // Если не супер-админ, показываем только пользователей его клуба
+        if (currentUser.role !== 'super_admin') {
+            if (!currentUser.clubId) {
+                throw new BadRequestException('У вас нет привязки к клубу');
+            }
+            where.clubId = currentUser.clubId;
+        }
+
+        return this.usersService.findUsers(where);
+    }
+
+// Обновить пользователя (для админ-панели)
+    @Patch('admin/:id')
+    @UseGuards(RolesGuard)
+    @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
+    async updateAdminUser(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateUserDto,
+        @Authorized() currentUser: User,
+    ) {
+        // Проверка прав: админ клуба может редактировать только пользователей своего клуба
+        if (currentUser.role !== 'super_admin') {
+            const user = await this.usersService.findOne(id);
+            if (!user) {
+                throw new BadRequestException('Пользователь не найден');
+            }
+            if (user.clubId !== currentUser.clubId) {
+                throw new ForbiddenException('Доступ запрещен');
+            }
+        }
+        return this.usersService.update(id, dto);
+    }
 }

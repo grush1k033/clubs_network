@@ -26,6 +26,21 @@ export class UsersService {
         });
     }
 
+    // Получить пользователей с фильтром (для админ-панели)
+    async findUsers(where?: any) {
+        return this.prisma.user.findMany({
+            where,
+            include: {
+                balance: true,
+                club: true,
+                tariff: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+    }
+
     // Получить одного пользователя по ID
     async findOne(id: number) {
         const user = await this.prisma.user.findUnique({
