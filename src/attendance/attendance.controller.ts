@@ -13,4 +13,9 @@ export class AttendanceController {
     async getMyAttendance(@Authorized() user: User) {
         return this.attendanceService.findByUserId(user.id);
     }
+
+    @Get('my-upcoming')
+    async getMyUpcoming(@Authorized() user: User) {
+        return this.attendanceService.getUpcomingByUserId(user.id);
+    }
 }

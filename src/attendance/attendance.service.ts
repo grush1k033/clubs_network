@@ -23,4 +23,33 @@ export class AttendanceService {
             orderBy: { createdAt: 'desc' },
         });
     }
+    async getUpcomingByUserId(userId: number) {
+        return this.prisma.attendance.findMany({
+            where: {
+                userId,
+                workout: {
+                    startTime: { gte: new Date() },
+                    status: { not: 'cancelled' }
+                }
+            },
+            include: {
+                workout: {
+                    include: {
+                        club: true,
+                        trainer: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                workout: {
+                    startTime: 'asc'
+                }
+            }
+        });
+    }
 }
