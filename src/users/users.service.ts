@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {UpdateRoleDto} from "./dto/update-role.dto";
 import {JoinClubDto} from "./dto/join-club.dto";
 import {UpdateProfileDto} from "./dto/update-profile.dto";
-import {UpdateUserDto} from "./dto/update-user-admin.dto";
+import {UpdateUserAdminDto} from "./dto/update-user-admin.dto";
 
 
 @Injectable()
@@ -153,7 +153,7 @@ export class UsersService {
 
     // В UsersService
 
-    async update(id: number, dto: UpdateUserDto) {
+    async update(id: number, dto: UpdateUserAdminDto) {
         await this.findOne(id);
 
         return this.prisma.user.update({
