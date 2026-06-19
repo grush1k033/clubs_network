@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, IsEnum, IsNumber } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsEnum} from 'class-validator';
 import { Role } from '../../auth/enums/role.enum';
 
 export class UpdateUserAdminDto {
@@ -14,7 +14,7 @@ export class UpdateUserAdminDto {
     @IsOptional()
     role?: Role;
 
-    @IsNumber()
-    @IsOptional()
+    // @IsNumber()
+    // @IsOptional()
     clubId?: number | null;
 }
