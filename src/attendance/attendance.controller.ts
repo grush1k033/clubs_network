@@ -15,6 +15,7 @@ export class AttendanceController {
     }
 
     @Get('my-upcoming')
+    @UseGuards(JwtGuard)
     async getMyUpcoming(@Authorized() user: User) {
         return this.attendanceService.getUpcomingByUserId(user.id);
     }
