@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {UpdateRoleDto} from "./dto/update-role.dto";
 import {JoinClubDto} from "./dto/join-club.dto";
 import {UpdateProfileDto} from "./dto/update-profile.dto";
+import {UpdateUserDto} from "./dto/update-user-admin.dto";
 
 
 @Injectable()
@@ -148,6 +149,22 @@ export class UsersService {
                 },
             }),
         ]);
+    }
+
+    // В UsersService
+
+    async update(id: number, dto: UpdateUserDto) {
+        await this.findOne(id);
+
+        return this.prisma.user.update({
+            where: { id },
+            data: dto,
+            include: {
+                balance: true,
+                club: true,
+                tariff: true,
+            },
+        });
     }
 
     // ========== ВСТУПЛЕНИЕ В КЛУБ И ПОКУПКА ТАРИФА ==========

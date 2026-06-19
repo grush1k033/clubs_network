@@ -9,7 +9,7 @@ import {
     ParseIntPipe,
     UseGuards,
     HttpCode,
-    HttpStatus, BadRequestException,
+    HttpStatus, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JoinClubDto } from './dto/join-club.dto';
@@ -22,6 +22,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
 import { Authorized } from '../auth/decorators/authorized.decorator';
 import { User } from '@prisma/client';
+import {UpdateUserAdminDto} from "./dto/update-user-admin.dto";
 
 @Controller('users')
 @UseGuards(JwtGuard)
@@ -209,7 +210,7 @@ export class UsersController {
     @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
     async updateAdminUser(
         @Param('id', ParseIntPipe) id: number,
-        @Body() dto: UpdateUserDto,
+        @Body() dto: UpdateUserAdminDto,
         @Authorized() currentUser: User,
     ) {
         // Проверка прав: админ клуба может редактировать только пользователей своего клуба
