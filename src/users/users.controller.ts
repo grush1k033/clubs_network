@@ -9,7 +9,7 @@ import {
     ParseIntPipe,
     UseGuards,
     HttpCode,
-    HttpStatus, BadRequestException, ForbiddenException,
+    HttpStatus, BadRequestException, ForbiddenException, UsePipes, ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JoinClubDto } from './dto/join-club.dto';
@@ -26,6 +26,7 @@ import {UpdateUserAdminDto} from "./dto/update-user-admin.dto";
 
 @Controller('users')
 @UseGuards(JwtGuard)
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
@@ -190,6 +191,7 @@ export class UsersController {
     // ========== НОВЫЕ ЭНДПОИНТЫ ДЛЯ АДМИН-ПАНЕЛИ ==========
 
     @Get('admin')
+    @UsePipes(new ValidationPipe({ skipMissingProperties: true }))
 // @UseGuards(RolesGuard)
 // @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
     async getAdminUsers() {
