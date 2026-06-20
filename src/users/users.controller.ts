@@ -193,16 +193,16 @@ export class UsersController {
     @UseGuards(RolesGuard)
     @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
     async getAdminUsers(@Authorized() currentUser: User) {
-        console.log('=== getAdminUsers called ===');
-        console.log('currentUser:', JSON.stringify(currentUser, null, 2));
-        console.log('currentUser.role:', currentUser?.role);
-        console.log('currentUser.clubId:', currentUser?.clubId);
+        const where: any = {};
 
-        // Временно возвращаем всех пользователей без фильтра
-        const users = await this.usersService.findUsers({});
-        console.log('users count:', users.length);
+        if (currentUser.role !== 'super_admin') {
+            if (!currentUser.clubId) {
+                throw new BadRequestException('У вас нет привязки к клубу');
+            }
+            where.clubId = currentUser.clubId;
+        }
 
-        return users;
+        return this.usersService.findUsers(where);
     }
 
     @Patch('admin/:id')
