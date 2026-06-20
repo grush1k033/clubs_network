@@ -451,4 +451,40 @@ export class UsersService {
             students,
         };
     }
+
+    async updateUserAdmin(id: number, dto: UpdateUserAdminDto) {
+        const user = await this.findOne(id);
+        if (!user) {
+            throw new NotFoundException('Пользователь не найден');
+        }
+
+        // Подготавливаем данные
+        const data: any = {};
+
+        if (dto.name !== undefined) {
+            data.name = dto.name;
+        }
+
+        if (dto.email !== undefined) {
+            data.email = dto.email;
+        }
+
+        if (dto.role !== undefined) {
+            data.role = dto.role;
+        }
+
+        if (dto.clubId !== undefined) {
+            data.clubId = dto.clubId === 0 ? null : dto.clubId;
+        }
+
+        return this.prisma.user.update({
+            where: { id },
+            data,
+            include: {
+                balance: true,
+                club: true,
+                tariff: true,
+            },
+        });
+    }
 }

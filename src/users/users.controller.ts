@@ -187,13 +187,14 @@ export class UsersController {
     // ========== НОВЫЕ ЭНДПОИНТЫ ДЛЯ АДМИН-ПАНЕЛИ ==========
 
 // Получить всех пользователей (для админ-панели)
+    // ========== НОВЫЕ ЭНДПОИНТЫ ДЛЯ АДМИН-ПАНЕЛИ ==========
+
     @Get('admin')
     @UseGuards(RolesGuard)
     @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
     async getAdminUsers(@Authorized() currentUser: User) {
         const where: any = {};
 
-        // Если не супер-админ, показываем только пользователей его клуба
         if (currentUser.role !== 'super_admin') {
             if (!currentUser.clubId) {
                 throw new BadRequestException('У вас нет привязки к клубу');
@@ -204,7 +205,6 @@ export class UsersController {
         return this.usersService.findUsers(where);
     }
 
-// Обновить пользователя (для админ-панели)
     @Patch('admin/:id')
     @UseGuards(RolesGuard)
     @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
@@ -213,7 +213,7 @@ export class UsersController {
         @Body() dto: UpdateUserAdminDto,
         @Authorized() currentUser: User,
     ) {
-        // Проверка прав: админ клуба может редактировать только пользователей своего клуба
+        // Проверка прав
         if (currentUser.role !== 'super_admin') {
             const user = await this.usersService.findOne(id);
             if (!user) {
@@ -223,6 +223,7 @@ export class UsersController {
                 throw new ForbiddenException('Доступ запрещен');
             }
         }
-        return this.usersService.update(id, dto);
+
+        return this.usersService.updateUserAdmin(id, dto);
     }
 }
