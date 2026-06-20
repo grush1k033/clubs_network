@@ -190,19 +190,11 @@ export class UsersController {
     // ========== НОВЫЕ ЭНДПОИНТЫ ДЛЯ АДМИН-ПАНЕЛИ ==========
 
     @Get('admin')
-    @UseGuards(RolesGuard)
-    @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
-    async getAdminUsers(@Authorized() currentUser: User) {
-        const where: any = {};
-
-        if (currentUser.role !== 'super_admin') {
-            if (!currentUser.clubId) {
-                throw new BadRequestException('У вас нет привязки к клубу');
-            }
-            where.clubId = currentUser.clubId;
-        }
-
-        return this.usersService.findUsers(where);
+// @UseGuards(RolesGuard)
+// @Roles(Role.SUPER_ADMIN, Role.CLUB_ADMIN)
+    async getAdminUsers() {
+        console.log('=== getAdminUsers called ===');
+        return this.usersService.findAll();
     }
 
     @Patch('admin/:id')
