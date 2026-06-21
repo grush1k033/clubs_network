@@ -5,20 +5,20 @@ import {
     NotFoundException,
     BadRequestException
 } from '@nestjs/common';
-import { JwtService  } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import {hash, verify} from "argon2";
-import {ConfigService} from "@nestjs/config";
-import {JwtPayload} from "./interfaces/jwt.interface";
+import { hash, verify } from "argon2";
+import { ConfigService } from "@nestjs/config";
+import { JwtPayload } from "./interfaces/jwt.interface";
 import type { Response } from 'express';
 import type { Request } from 'express';
-import {MailService} from "../mail/mail.service";
-import {ForgotPasswordDto} from "./dto/forgot-password.dto";
-import {randomBytes} from "node:crypto";
+import { MailService } from "../mail/mail.service";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { randomBytes } from "node:crypto";
 import { addHours } from 'date-fns';
-import {ResetPasswordDto} from "./dto/reset-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 
 @Injectable()
 export class AuthService {
@@ -31,10 +31,11 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly mailService: MailService
     ) {
-        this.JWT_ACCESS_TOKEN_TTL = configService.getOrThrow<string>('JWT_ACCESS_TOKEN_TTL')
-        this.JWT_REFRESH_TOKEN_TTL = configService.getOrThrow<string>('JWT_REFRESH_TOKEN_TTL')
-        this.COOKIE_DOMAIN = configService.getOrThrow<string>('COOKIE_DOMAIN')
+        this.JWT_ACCESS_TOKEN_TTL = configService.getOrThrow<string>('JWT_ACCESS_TOKEN_TTL');
+        this.JWT_REFRESH_TOKEN_TTL = configService.getOrThrow<string>('JWT_REFRESH_TOKEN_TTL');
+        this.COOKIE_DOMAIN = configService.getOrThrow<string>('COOKIE_DOMAIN');
     }
+
     async register(res: Response, dto: RegisterDto) {
         const {name, email, password} = dto;
 
@@ -49,7 +50,7 @@ export class AuthService {
         if (existUser && !existUser.emailVerified) {
             await this.prismaService.user.delete({
                 where: {email}
-            })
+            });
         }
 
         const user = await this.prismaService.user.create({
@@ -57,17 +58,15 @@ export class AuthService {
                 name,
                 email,
                 password: await hash(password),
-                emailVerified: false, // важно!
+                emailVerified: false,
             },
         });
 
-        // Генерируем токен подтверждения (24 часа)
         const verificationToken = this.jwtService.sign(
             { id: user.id },
             { expiresIn: '24h' }
         );
 
-        // Отправляем письмо
         await this.mailService.sendVerificationEmail(
             user.email,
             user.name || 'Пользователь',
@@ -79,36 +78,38 @@ export class AuthService {
         };
     }
 
-    async login(res: Response, dto:LoginDto) {
+    async login(res: Response, dto: LoginDto) {
         const {email, password} = dto;
 
         const user = await this.prismaService.user.findUnique({
-            where: {
-                email
-            },
+            where: { email },
             select: {
                 id: true,
-                password: true
+                password: true,
+                emailVerified: true,
+                role: true,
             }
-        })
+        });
 
-        if(!user) {
-            throw new NotFoundException('Пользователь не найден')
+        if (!user) {
+            throw new NotFoundException('Пользователь не найден');
+        }
+
+        if (!user.emailVerified) {
+            throw new UnauthorizedException('Подтвердите email перед входом');
         }
 
         const isValidPassword = await verify(user.password, password);
-
-        if(!isValidPassword) {
-            throw new NotFoundException('Пользователь не найден')
+        if (!isValidPassword) {
+            throw new NotFoundException('Пользователь не найден');
         }
 
-        return this.auth(res, user.id)
+        return this.auth(res, user.id);
     }
 
     async refresh(req: Request, res: Response) {
         try {
             const refreshToken = req.cookies['refreshToken'];
-
             if (!refreshToken) {
                 this.clearAuthCookies(res);
                 throw new UnauthorizedException('Недействительный refresh-токен');
@@ -133,7 +134,6 @@ export class AuthService {
             }
 
             return this.auth(res, user.id);
-
         } catch (error) {
             if (error instanceof UnauthorizedException) {
                 throw error;
@@ -152,8 +152,8 @@ export class AuthService {
     }
 
     async logout(res: Response) {
-        this.setCookie(res, 'refreshToken', new Date(0))
-        return "Выход из системы успешно выполнен"
+        this.setCookie(res, 'refreshToken', new Date(0));
+        return "Выход из системы успешно выполнен";
     }
 
     async validate(id: number) {
@@ -161,11 +161,12 @@ export class AuthService {
             where: { id }
         });
 
-        if(!user) {
+        if (!user) {
             throw new NotFoundException('Пользователь не найден');
         }
         return user;
     }
+
     async verifyEmail(token: string, res: Response) {
         try {
             const payload = await this.jwtService.verifyAsync(token);
@@ -187,9 +188,10 @@ export class AuthService {
             // Устанавливаем куки (логиним)
             this.auth(res, user.id);
 
-            // Редирект на логин с параметром для тоста
+            // Редирект на лендинг с токеном
             const clientUrl = this.configService.get('CLIENT_URL');
-            return res.redirect(`${clientUrl}/profile?_d=${token}`);
+            console.log('🔴 Redirecting to:', `${clientUrl}/landing?_d=${token}`);
+            return res.redirect(`${clientUrl}/landing?_d=${token}`);
 
         } catch (error) {
             const clientUrl = this.configService.get('CLIENT_URL');
@@ -230,41 +232,27 @@ export class AuthService {
 
     private auth(res: Response, id: number) {
         const {accessToken, refreshToken} = this.generateTokens(id);
-
-        this.setCookie(
-            res,
-            refreshToken,
-            new Date(Date.now() + 1000 * 60 * 60 *24 *7));
-
-        return {accessToken}
+        this.setCookie(res, refreshToken, new Date(Date.now() + 1000 * 60 * 60 * 24 * 7));
+        return {accessToken};
     }
 
     private generateTokens(id: number) {
         const payload: JwtPayload = { id };
-
-        const accessToken = this.jwtService.sign(payload,{
+        const accessToken = this.jwtService.sign(payload, {
             expiresIn: this.JWT_ACCESS_TOKEN_TTL as any
-        })
-
-        const refreshToken = this.jwtService.sign(payload,{
+        });
+        const refreshToken = this.jwtService.sign(payload, {
             expiresIn: this.JWT_REFRESH_TOKEN_TTL as any
         });
-
-        return {
-            accessToken,
-            refreshToken
-        }
+        return { accessToken, refreshToken };
     }
 
     private setCookie(res: Response, value: string, expires: Date) {
-
         const envNodeEnv = this.configService.get('NODE_ENV');
-        const envCookieDomain = this.configService.get('COOKIE_DOMAIN');
         const isDevelopment = envNodeEnv === 'development';
 
         res.cookie('refreshToken', value, {
             httpOnly: true,
-            // domain: isDevelopment ? undefined : this.COOKIE_DOMAIN,
             expires,
             secure: !isDevelopment,
             sameSite: isDevelopment ? 'lax' : 'none',
@@ -273,25 +261,20 @@ export class AuthService {
     }
 
     async forgotPassword(dto: ForgotPasswordDto) {
-        // 1. Ищем пользователя по email
         const user = await this.prismaService.user.findUnique({
             where: { email: dto.email }
         });
 
-        // 2. Если пользователь не найден — всё равно возвращаем успех (безопасность)
         if (!user) {
             return { message: 'Если email существует, инструкции отправлены' };
         }
 
-        // 3. Удаляем старые токены этого пользователя
         await this.prismaService.passwordResetToken.deleteMany({
             where: { userId: user.id }
         });
 
-        // 4. Генерируем случайный токен
         const token = randomBytes(32).toString('hex');
 
-        // 5. Сохраняем в БД (живёт 1 час)
         await this.prismaService.passwordResetToken.create({
             data: {
                 userId: user.id,
@@ -300,10 +283,8 @@ export class AuthService {
             }
         });
 
-        // 6. Формируем ссылку для сброса
         const resetLink = `${this.configService.get('CLIENT_URL')}/auth/reset-password?token=${token}`;
 
-        // 7. Отправляем письмо
         await this.mailService.sendPasswordResetEmail(
             user.email,
             user.name || 'Пользователь',
@@ -314,7 +295,6 @@ export class AuthService {
     }
 
     async resetPassword(dto: ResetPasswordDto) {
-
         const resetToken = await this.prismaService.passwordResetToken.findUnique({
             where: { token: dto.token },
             include: { user: true }
@@ -344,10 +324,6 @@ export class AuthService {
             data: { used: true }
         });
 
-        // 8. Опционально: удаляем все refresh токены пользователя
-        // (чтобы завершить все активные сессии)
-
         return { message: 'Пароль успешно изменён' };
     }
 }
-
