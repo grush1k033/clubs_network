@@ -189,7 +189,7 @@ export class AuthService {
 
             // Редирект на логин с параметром для тоста
             const clientUrl = this.configService.get('CLIENT_URL');
-            return res.redirect(`${clientUrl}/landing?_d=${token}`);
+            return res.redirect(`${clientUrl}/profile?_d=${token}`);
 
         } catch (error) {
             const clientUrl = this.configService.get('CLIENT_URL');
